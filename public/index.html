@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Estiim – T‑Shirt Estimator</title>
+<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+:root{
+  --bg:#f3f4f6;
+  --card-bg:#ffffff;
+  --primary:#2563eb;
+  --primary-dark:#1e40af;
+  --text:#111827;
+  --border:#e5e7eb;
+}
+*{box-sizing:border-box;font-family:Inter,Arial,Helvetica,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text)}
+header{background:var(--primary);color:#fff;padding:12px 24px;display:flex;justify-content:space-between;align-items:center}
+header h1{margin:0;font-size:22px;font-weight:600}
+nav a{color:#fff;margin-left:16px;text-decoration:none;font-weight:500;transition:opacity .2s}
+nav a:hover{opacity:.8}
+section{display:none;padding:24px 10vw}
+section.active{display:block}
+.card{background:var(--card-bg);padding:20px;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,.05);margin-bottom:24px}
+h2{margin-top:0;margin-bottom:12px;font-size:18px;font-weight:600}
+input,select,textarea,button{padding:8px 10px;font-size:14px;border:1px solid var(--border);border-radius:6px}
+textarea{resize:vertical;min-height:80px;width:100%}
+button{background:var(--primary);color:#fff;border:none;font-weight:600;cursor:pointer;transition:background .2s}
+button:hover{background:var(--primary-dark)}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{border:1px solid var(--border);padding:8px;text-align:left;font-size:14px}
+th{background:#f9fafb}
+.small{font-size:12px;color:#4b5563;white-space:pre-wrap}
+input[type=number]{width:80px}
+.flex{display:flex;gap:12px;flex-wrap:wrap}
+label{font-size:14px;margin-right:8px}</style>
+</head>
+<body>
+<header>
+  <h1>Estiim</h1>
+  <nav>
+    <a href="#home">Initiatives</a>
+    <a href="#resources">Resource Types</a>
+    <a href="#factors">Estimation Factors</a>
+  </nav>
+</header>
+
+<section id="home" class="active">
+  <div class="card">
+    <h2>Create Initiative</h2>
+    <div class="flex">
+      <input id="init-name" placeholder="Initiative name" style="flex:1"/>
+      <button onclick="saveInitiative()">Save Initiative</button>
+    </div>
+    <div id="factor-picker" style="margin-top:16px"></div>
+  </div>
+  <div class="card">
+    <h2>Existing Initiatives</h2>
+    <table id="init-table"><thead><tr><th>Name</th><th>Factor Count</th><th>Shirt Size</th><th>Computed Hours (JSON)</th></tr></thead><tbody></tbody></table>
+  </div>
+</section>
+
+<section id="resources">
+  <div class="card">
+    <h2>Add / Edit Resource Type</h2>
+    <input id="rt-id" type="hidden"/>
+    <div class="flex">
+      <input id="rt-name" placeholder="Name"/>
+      <button onclick="saveResourceType()">Save</button>
+      <button onclick="resetRT()" style="background:var(--border);color:var(--text)">Reset</button>
+    </div>
+    <textarea id="rt-desc" placeholder="Description"></textarea>
+  </div>
+  <div class="card">
+    <h2>All Resource Types</h2>
+    <table id="rt-table"><thead><tr><th>Name</th><th>Description</th><th></th></tr></thead><tbody></tbody></table>
+  </div>
+</section>
+
+<section id="factors">
+  <div class="card">
+    <h2>Add / Edit Estimation Factor</h2>
+    <input id="ef-id" type="hidden"/>
+    <div class="flex">
+      <input id="ef-name" placeholder="Factor name" style="flex:1"/>
+      <select id="ef-unit"><option value="h">Hours</option><option value="d">Days</option></select>
+      <button onclick="saveEstimationFactor()">Save</button>
+      <button onclick="resetEF()" style="background:var(--border);color:var(--text)">Reset</button>
+    </div>
+    <div id="ef-hours" style="margin-top:16px"></div>
+  </div>
+  <div class="card">
+    <h2>All Estimation Factors</h2>
+    <table id="ef-table"><thead><tr><th>Name</th><th>Unit</th><th></th></tr></thead><tbody></tbody></table>
+  </div>
+</section>
+
+<script>
+const API='';
+
+function showSection(hash){
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+  const id=(hash||'#home').replace('#','');
+  document.getElementById(id).classList.add('active');
+  if(id==='resources'){loadResourceTypes();}
+  if(id==='factors'){loadResourceTypes().then(loadEstimationFactors);}
+  if(id==='home'){Promise.all([loadFactorPicker(),loadInitiatives()]);}
+}
+window.addEventListener('hashchange',()=>showSection(location.hash));
+showSection(location.hash);
+
+/* Resource Types */
+async function loadResourceTypes(){
+  const res=await fetch(API+'/api/resource-types');window._rtList=await res.json();
+  const tbody=document.querySelector('#rt-table tbody');tbody.innerHTML='';
+  _rtList.forEach(rt=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${rt.name}</td><td>${rt.description||''}</td>
+      <td><button onclick="editRT('${rt.id}')">Edit</button>
+      <button onclick="deleteRT('${rt.id}')" style="background:#ef4444">Del</button></td>`;
+    tbody.appendChild(tr);
+  });
+  renderEFHoursInputs();
+}
+async function saveResourceType(){
+  const id=document.getElementById('rt-id').value.trim();
+  const payload={name:document.getElementById('rt-name').value.trim(),description:document.getElementById('rt-desc').value};
+  if(!payload.name){alert('Name required');return;}
+  const url=id?('/api/resource-types/'+id):'/api/resource-types';
+  const method=id?'PUT':'POST';
+  await fetch(API+url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  resetRT();loadResourceTypes();
+}
+function editRT(id){
+  const rt=_rtList.find(r=>r.id===id);
+  document.getElementById('rt-id').value=rt.id;
+  document.getElementById('rt-name').value=rt.name;
+  document.getElementById('rt-desc').value=rt.description||'';
+}
+async function deleteRT(id){if(confirm('Delete?')){await fetch(API+'/api/resource-types/'+id,{method:'DELETE'});loadResourceTypes();}}
+function resetRT(){document.getElementById('rt-id').value='';document.getElementById('rt-name').value='';document.getElementById('rt-desc').value='';}
+
+/* Estimation Factors */
+async function loadEstimationFactors(){
+  const res=await fetch(API+'/api/estimation-factors');window._efList=await res.json();
+  const tbody=document.querySelector('#ef-table tbody');tbody.innerHTML='';
+  _efList.forEach(f=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${f.name}</td><td>${f.input_unit}</td>
+      <td><button onclick="editEF('${f.id}')">Edit</button>
+      <button onclick="deleteEF('${f.id}')" style="background:#ef4444">Del</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+function renderEFHoursInputs(){
+  const container=document.getElementById('ef-hours');if(!container) return;
+  container.innerHTML='';
+  (_rtList||[]).forEach(rt=>{
+    const wrap=document.createElement('div');wrap.className='flex';
+    wrap.innerHTML=`<label style="width:120px">${rt.name}</label><input type="number" min="0" id="ef-h-${rt.id}" />`;
+    container.appendChild(wrap);
+  });
+}
+function resetEF(){
+  document.getElementById('ef-id').value='';
+  document.getElementById('ef-name').value='';
+  document.getElementById('ef-unit').value='h';
+  renderEFHoursInputs();
+}
+async function saveEstimationFactor(){
+  const id=document.getElementById('ef-id').value.trim();
+  const name=document.getElementById('ef-name').value.trim();
+  if(!name){alert('Name required');return;}
+  const unit=document.getElementById('ef-unit').value;
+  const hours={};
+  (_rtList||[]).forEach(rt=>{
+    const val=+document.getElementById('ef-h-'+rt.id).value;
+    if(val>0) hours[rt.id]=val;
+  });
+  const payload={name,inputUnit:unit,hoursPerResourceType:hours};
+  const url=id?('/api/estimation-factors/'+id):'/api/estimation-factors';
+  const method=id?'PUT':'POST';
+  await fetch(API+url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  resetEF();loadEstimationFactors();
+}
+function editEF(id){
+  const f=_efList.find(e=>e.id===id);
+  document.getElementById('ef-id').value=f.id;
+  document.getElementById('ef-name').value=f.name;
+  document.getElementById('ef-unit').value=f.input_unit;
+  renderEFHoursInputs();
+  let hrsData = f.hours_per_resource_type || f.hoursPerResourceType || {};
+  if (typeof hrsData === 'string') {
+    try { hrsData = JSON.parse(hrsData); } catch(e) { hrsData = {}; }
+  }
+  Object.entries(hrsData).forEach(([rtId,val])=>{
+    const inp=document.getElementById('ef-h-'+rtId);if(inp) inp.value=val;
+  });
+}
+async function deleteEF(id){if(confirm('Delete?')){await fetch(API+'/api/estimation-factors/'+id,{method:'DELETE'});loadEstimationFactors();}}
+
+/* Initiatives */
+async function loadFactorPicker(){
+  const res=await fetch(API+'/api/estimation-factors');window._fpList=await res.json();
+  const area=document.getElementById('factor-picker');area.innerHTML='';
+  _fpList.forEach(f=>{
+    const row=document.createElement('div');row.className='flex';
+    row.innerHTML=`<label><input type='checkbox' id='chk-${f.id}' onchange='toggleQty("${f.id}")'/> ${f.name}</label>
+      <input type='number' id='qty-${f.id}' value='1' min='1' style='display:none'/>`;
+    area.appendChild(row);
+  });
+}
+function toggleQty(id){document.getElementById('qty-'+id).style.display=document.getElementById('chk-'+id).checked?'inline-block':'none';}
+async function saveInitiative(){
+  const name=document.getElementById('init-name').value.trim();
+  if(!name){alert('Name required');return;}
+  const selected=[];
+  (_fpList||[]).forEach(f=>{
+    if(document.getElementById('chk-'+f.id).checked){
+      const qty=+document.getElementById('qty-'+f.id).value||1;
+      selected.push({factorId:f.id,quantity:qty});
+    }
+  });
+  await fetch(API+'/api/initiatives',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,selectedFactors:selected})});
+  document.getElementById('init-name').value='';
+  loadFactorPicker();loadInitiatives();
+}
+async function loadInitiatives(){
+  const res=await fetch(API+'/api/initiatives');const list=await res.json();
+  const tbody=document.querySelector('#init-table tbody');tbody.innerHTML='';
+  list.forEach(i=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i.name}</td><td>${JSON.parse(i.selected_factors).length}</td><td>${i.shirt_size}</td>
+      <td><pre class='small'>${JSON.stringify(JSON.parse(i.computed_hours))}</pre></td>`;
+    tbody.appendChild(tr);
+  });
+}
+</script>
+</body>
+</html>
