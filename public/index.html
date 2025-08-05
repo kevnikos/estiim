@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;display=swap');
-:root { --bg:#f3f4f6; --card:#fff; --border:#e5e7eb; --primary:#2ecc71; --primary-dark:#27ae60; --text:#111827; --overlay:rgba(0,0,0,0.4); --orange:#f97316; --orange-dark:#ea580c; --red:#ef4444; --green:#22c55e; --blue: #007bff; --blue-dark: #0056b3;} /* Added blue colors */
+:root { --bg:#f3f4f6; --card:#fff; --border:#e5e7eb; --primary:#2ecc71; --primary-dark:#27ae60; --text:#111827; --overlay:rgba(0,0,0,0.4); --orange:#f97316; --orange-dark:#ea580c; --red:#ef4444; --green:#22c55e; --blue: #007bff; --blue-dark: #0056b3; --light-green: #e0ffe0; --dark-green: #008000;} /* Added new green colors */
 /* Added scroll-padding-top to account for sticky header */
 html, body { scroll-behavior: smooth; scroll-padding-top: 60px; /* Adjust this value if header height changes */ }
 * { box-sizing:border-box; font-family:Inter,Arial,sans-serif; }
@@ -82,23 +82,54 @@ footer {
     padding: 5px;
     font-size: 12px;
 }
-.factor-calc {
-    position: absolute;
-    top: 24px;
-    right: 24px;
+
+/* Removed absolute positioning from .factor-calc. It will now be a child of the modal content. */
+/* Renamed .factor-calc to .factor-summary-box and applied blue styling */
+.factor-summary-box {
     font-size: 12px;
     text-align: right;
     line-height: 1.5;
-    background-color: #e6f7ff; /* Light blue background */
+    background-color: #e6f7ff; /* Light blue background, similar to original .factor-calc */
     padding: 8px 12px;
     border-radius: 6px;
     display: flex; /* Make it horizontal */
     gap: 12px;
     align-items: center;
+    color: #007bff; /* Blue text color */
 }
-.factor-calc > div {
+.factor-summary-box > div {
     white-space: nowrap;
 }
+
+/* New container to hold both the green and blue calculation boxes */
+.calculations-container {
+    display: flex; /* Arrange children horizontally */
+    gap: 12px; /* Space between the green and blue boxes */
+    margin-bottom: 20px; /* Space between calculations and search input */
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
+/* New style for date calculation box (green) */
+.initiative-date-calc {
+    background-color: var(--light-green); /* Light green background */
+    color: var(--dark-green); /* Dark green text */
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-weight: bold;
+    flex-grow: 1; /* Allow it to grow and take space */
+    text-align: left; /* Align text to the left */
+}
+
+/* Adjust factor-search-input margin-top to ensure it's below the new container */
+#factor-search-input {
+    width: 100%;
+    margin-top: 12px; /* Ensure space below the calculations container */
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
 
 /* New styles for factor items and custom checkboxes */
 .factor-item {
@@ -745,13 +776,22 @@ footer {
 
 <div id="modal-factors" class="modal-overlay"><div class="modal">
     <button class="close" onclick="window.closeModal('factors')">×</button>
-    <div class="factor-calc">
-      <div id="factor-hours">0h</div>
-      <div id="factor-days">0d</div>
-      <div id="factor-months">0m</div>
-      <div id="factor-size">Size: XS</div>
-    </div>
     <h2 style="padding-right: 120px;">T-Shirt Factors</h2>
+    <!-- New container for both date and factor calculations -->
+    <div class="calculations-container">
+      <!-- New div for date calculations (green box) -->
+      <div id="initiative-date-calc" class="initiative-date-calc">
+        Start: N/A | End: N/A | Duration: Check
+      </div>
+      <!-- Wrapper for existing factor calculation elements (blue box) -->
+      <div class="factor-summary-box">
+        <div id="factor-hours">0h</div>
+        <div id="factor-days">0d</div>
+        <div id="factor-months">0m</div>
+        <div id="factor-size">Size: XS</div>
+      </div>
+    </div>
+
     <!-- New search input -->
     <input type="text" id="factor-search-input" placeholder="Search factors..." oninput="window.loadFactorPicker(this.value)">
     <div id="factor-picker-container"> <!-- New container for scrollbar -->
@@ -1254,6 +1294,7 @@ async function openFactorModal() {
     await loadShirtSizes(); // Load shirt sizes as well
     document.getElementById('factor-search-input').value = ''; // Clear search input on open
     loadFactorPicker(); // Load all factors initially
+    updateDateCalculations(); // Call this to update the new date fields
     openModal('factors');
 }
 function saveFactors() {
@@ -1314,6 +1355,64 @@ function updateFactorCalculations() {
     document.getElementById('factor-months').textContent = `${totalMonths}m`;
     document.getElementById('factor-size').textContent = `Size: ${shirtSize}`;
 }
+
+// New: Calculate business days between two dates
+function calculateBusinessDays(startDate, endDate) {
+    let count = 0;
+    const currentDate = new Date(startDate.getTime());
+    while (currentDate <= endDate) {
+        const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 6 = Saturday
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // If not Sunday or Saturday
+            count++;
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return count;
+}
+
+// New: Update initiative date calculations
+function updateDateCalculations() {
+    const startDateInput = document.getElementById('init-start-date').value;
+    const endDateInput = document.getElementById('init-end-date').value;
+    const dateCalcDiv = document.getElementById('initiative-date-calc');
+
+    let displayStartDate = 'N/A';
+    let displayEndDate = 'N/A';
+    let durationText = 'Check';
+
+    const startDate = startDateInput ? new Date(startDateInput + 'T00:00:00') : null; // Add T00:00:00 to ensure UTC interpretation for consistent date math
+    const endDate = endDateInput ? new Date(endDateInput + 'T00:00:00') : null;
+
+    if (startDateInput) {
+        displayStartDate = startDateInput.substring(2); // yy-mm-dd
+    }
+    if (endDateInput) {
+        displayEndDate = endDateInput.substring(2); // yy-mm-dd
+    }
+
+    if (startDate && endDate && startDate <= endDate) {
+        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+        const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Use ceil to include both start and end day
+
+        const businessDays = calculateBusinessDays(startDate, endDate);
+        const weeks = (totalDays / 7).toFixed(1);
+
+        // Calculate months more accurately
+        let months = (endDate.getFullYear() - startDate.getFullYear()) * 12;
+        months -= startDate.getMonth();
+        months += endDate.getMonth();
+        // Adjust for partial months if end date is before start date's day in the month
+        if (endDate.getDate() < startDate.getDate()) {
+            months--;
+        }
+        months = Math.max(0, months); // Ensure non-negative months
+
+        durationText = `${months}m, ${weeks}w, ${businessDays}d`;
+    }
+
+    dateCalcDiv.textContent = `Start: ${displayStartDate} | End: ${displayEndDate} | Duration: ${durationText}`;
+}
+
 
 // Journal functions for Initiatives
 function renderJournalLog() {
@@ -1862,6 +1961,7 @@ async function showAuditTrail(initiativeId, initiativeName) {
                         for (const key of keysToCompare) {
                             const oldValue = oldData[key];
                             const newValue = newData[key];
+                            
                             // Special handling for date fields to compare only YYYY-MM-DD part
                             if (key === 'start_date' || key === 'end_date') {
                                 const oldDate = (oldValue || '').substring(0, 10);
