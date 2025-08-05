@@ -139,7 +139,7 @@ footer {
     margin-bottom: 8px;
     padding: 5px 0;
     border: 1px solid var(--border); /* Added border for clarity */
-    border-radius: 66px; /* Increased border-radius for more rounded corners */
+    border-radius: 6px; /* Increased border-radius for more rounded corners */
     padding: 10px;
     background-color: var(--card);
     box-shadow: 0 1px 2px rgba(0,0,0,.03);
@@ -499,7 +499,7 @@ footer {
     max-height: 225px; /* 5 items * ~45px height per row */
     overflow-y: auto;
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: 6px; /* Corrected from 66px */
     padding: 10px;
     background-color: #f9fafb;
 }
@@ -700,7 +700,16 @@ footer {
         <div class="initiative-details-left">
             <div class="flex"><input id="init-name" placeholder="Name" style="flex:1"><input id="init-custom-id" placeholder="User-Defined ID" style="flex:1"></div>
             <textarea id="init-desc" placeholder="Description" style="width:100%;margin-top:12px"></textarea>
-            <div class="flex" style="margin-top:12px"><div><label>Priority</label><br><select id="init-priority"><option>Low</option><option>Medium</option><option>High</option></select></div><div><label>Pri #</label><br><input id="init-priority-num" type="number" min="1" max="10"></div><div><label>Status</label><br><select id="init-status"><option>To Do</option><option>Draft</option><option>Proposal</option><option>Re-Estimation</option><option>Accepted</option><option>Rejected</option></select></div></div>
+            <div class="flex" style="margin-top:12px">
+                <div><label>Priority</label><br><select id="init-priority"><option>Low</option><option>Medium</option><option>High</option></select></div>
+                <div><label>Pri #</label><br><input id="init-priority-num" type="number" min="1" max="10"></div>
+                <div><label>Status</label><br><select id="init-status"><option>To Do</option><option>Draft</option><option>Proposal</option><option>Re-Estimation</option><option>Accepted</option><option>Rejected</option><option>Closed</option></select></div>
+            </div>
+            <!-- New fields for Confidence and Estimation Type -->
+            <div class="flex" style="margin-top:12px">
+                <div><label>Confidence</label><br><select id="init-confidence"><option>Low</option><option>Medium</option><option>High</option></select></div>
+                <div><label>Estimation Type</label><br><select id="init-estimation-type"><option>WAG</option><option>High</option><option>Mid</option><option>Low</option></select></div>
+            </div>
             <div class="flex" style="margin-top:12px"><div><label>Start Date</label><br><input id="init-start-date" type="date"></div><div><label>End Date</label><br><input id="init-end-date" type="date"></div></div>
             <textarea id="init-scope" placeholder="In Scope" style="width:100%;margin-top:12px"></textarea>
             <textarea id="init-out" placeholder="Out of Scope" style="width:100%;margin-top:12px"></textarea>
@@ -938,20 +947,29 @@ window.toggleFlyoutMenu = toggleFlyoutMenu; // Make it globally accessible
 
 
 function show(hash) {
+  console.log('show function called with hash:', hash); // Debug log
   document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
   const id = (hash || '#home').slice(1);
   const sec = document.getElementById(id);
   if (sec) {
       sec.classList.add('active');
+      console.log('Section activated:', id); // Debug log
       // Scroll to the section with an offset for the fixed header
       const headerHeight = document.getElementById('main-header').offsetHeight;
-      // Using setTimeout with a small delay to ensure rendering is complete before scrolling
       setTimeout(() => {
           window.scrollTo({
               top: sec.offsetTop - headerHeight,
               behavior: 'smooth'
           });
-      }, 50); // Small delay to allow layout to settle
+          console.log('Scrolled to section:', id); // Debug log
+      }, 50);
+  }
+
+  // Close the flyout menu if it's open
+  const flyoutMenu = document.getElementById('flyout-menu');
+  if (flyoutMenu.classList.contains('active')) {
+      flyoutMenu.classList.remove('active');
+      console.log('Flyout menu closed.'); // Debug log
   }
 
   if (id === 'home') loadInitiatives(currentSortColumn, currentSortDirection); // Pass sort state
@@ -960,12 +978,6 @@ function show(hash) {
   }
   if (id === 'shirt-sizes') loadShirtSizes();
   if (id === 'prefs') populatePrefsPage(); // Populate prefs fields when page is shown
-  
-  // Close the flyout menu if it's open
-  const flyoutMenu = document.getElementById('flyout-menu');
-  if (flyoutMenu.classList.contains('active')) {
-      flyoutMenu.classList.remove('active');
-  }
 }
 window.show = show; // Make it globally accessible
 
@@ -973,40 +985,36 @@ window.addEventListener('hashchange', () => show(location.hash));
 
 // Resource Types CRUD
 async function loadRT() {
-  const res = await fetch(API + '/api/resource-types');
-  const allResourceTypes = await res.json();
-  window.rtList = allResourceTypes; // Store all resource types
+  try {
+    const res = await fetch(API + '/api/resource-types');
+    const allResourceTypes = await res.json();
+    window.rtList = allResourceTypes; // Store all resource types
 
-  const searchQuery = document.getElementById('rt-search-input')?.value.toLowerCase() || '';
+    const searchQuery = document.getElementById('rt-search-input')?.value.toLowerCase() || '';
 
-  // Filter resource types based on search query
-  let filteredResourceTypes = allResourceTypes.filter(r => {
-    return r.name.toLowerCase().includes(searchQuery) || (r.description && r.description.toLowerCase().includes(searchQuery));
-  });
+    // Filter resource types based on search query
+    let filteredResourceTypes = allResourceTypes.filter(r => {
+      return r.name.toLowerCase().includes(searchQuery) || (r.description && r.description.toLowerCase().includes(searchQuery));
+    });
 
-  // Sort filtered resource types alphabetically by name
-  filteredResourceTypes.sort((a, b) => a.name.localeCompare(b.name));
+    // Sort filtered resource types alphabetically by name
+    filteredResourceTypes.sort((a, b) => a.name.localeCompare(b.name));
 
-  const tbody = document.querySelector('#rt-table tbody');
-  tbody.innerHTML = '';
+    const tbody = document.querySelector('#rt-table tbody');
+    tbody.innerHTML = '';
 
-  // Limit the number of displayed items
-  const displayLimit = window.userPreferences.maxResourceTypes;
-  const itemsToDisplay = filteredResourceTypes.slice(0, displayLimit);
+    // Limit the number of displayed items
+    const displayLimit = window.userPreferences.maxResourceTypes;
+    const itemsToDisplay = filteredResourceTypes.slice(0, displayLimit);
 
-  itemsToDisplay.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.name}</td><td>${r.description||''}</td><td><button onclick="window.editRT('${r.id}')">Edit</button><button onclick=\"window.delRT('${r.id}')\" style=\"background:var(--red)\">Del</button></td>`;
-    tbody.appendChild(tr);
-  });
-
-  // Dynamically adjust table container height if needed (though fixed is set in CSS)
-  const rtTableContainer = document.getElementById('rt-table-container');
-  if (rtTableContainer) {
-      // Calculate approximate row height (e.g., 45px per row including padding/border)
-      // This is a fallback if CSS max-height isn't perfectly aligned with row count
-      // For simplicity and consistency with fixed CSS, we'll rely on the CSS max-height.
-      // If dynamic height based on actual content is strictly needed, this is where it would go.
+    itemsToDisplay.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${r.name}</td><td>${r.description||''}</td><td><button onclick="window.editRT('${r.id}')">Edit</button><button onclick=\"window.delRT('${r.id}')\" style=\"background:var(--red)\">Del</button></td>`;
+      tbody.appendChild(tr);
+    });
+  } catch (error) {
+    console.error('Error loading resource types:', error);
+    showMessage('Error', 'Failed to load resource types.', 'error');
   }
 }
 // New function to clear and open Resource Type modal for adding
@@ -1025,8 +1033,13 @@ function editRT(id) {
 }
 async function delRT(id) {
   if (!confirm('Delete?')) return; 
-  await fetch(API + `/api/resource-types/${id}`, { method: 'DELETE' });
-  loadRT();
+  try {
+    await fetch(API + `/api/resource-types/${id}`, { method: 'DELETE' });
+    loadRT();
+  } catch (error) {
+    console.error('Error deleting resource type:', error);
+    showMessage('Error', 'Failed to delete resource type.', 'error');
+  }
 }
 async function saveResourceType() {
   const id = document.getElementById('rt-id').value.trim();
@@ -1035,12 +1048,17 @@ async function saveResourceType() {
   const desc = document.getElementById('rt-desc').value;
   const url = id ? `/api/resource-types/${id}` : '/api/resource-types';
   const method = id ? 'PUT' : 'POST';
-  const res = await fetch(API + url, {
-    method, headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ name, description: desc })
-  });
-  if (!res.ok) { showMessage('Error', 'Error: ' + res.status, 'error'); return; }
-  closeModal('rt'); loadRT();
+  try {
+    const res = await fetch(API + url, {
+      method, headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name, description: desc })
+    });
+    if (!res.ok) { showMessage('Error', 'Error: ' + res.status, 'error'); return; }
+    closeModal('rt'); loadRT();
+  } catch (error) {
+    console.error('Error saving resource type:', error);
+    showMessage('Error', 'Failed to save resource type.', 'error');
+  }
 }
 
 // Estimation Factors CRUD
@@ -1053,46 +1071,43 @@ function renderEFGrid() {
   });
 }
 async function loadEF() {
-  renderEFGrid(); // This is for the modal, keep it.
-  const res = await fetch(API + '/api/estimation-factors');
-  const allFactors = await res.json();
-  window.efList = allFactors; // Store all factors
+  try {
+    renderEFGrid(); // This is for the modal, keep it.
+    const res = await fetch(API + '/api/estimation-factors');
+    const allFactors = await res.json();
+    window.efList = allFactors; // Store all factors
 
-  const searchQuery = document.getElementById('ef-search-input')?.value.toLowerCase() || '';
+    const searchQuery = document.getElementById('ef-search-input')?.value.toLowerCase() || '';
 
-  // Filter factors based on search query
-  let filteredFactors = allFactors.filter(f => {
-    const factorName = f.name.toLowerCase();
-    const factorDescription = (f.description || '').toLowerCase(); // Include description in search
-    const resourceNames = Object.entries(f.hoursPerResourceType || {})
-      .map(([id]) => {
-        const r = window.rtList.find(x => x.id === id);
-        return r ? r.name.toLowerCase() : '';
-      })
-      .join(' ');
-    return factorName.includes(searchQuery) || factorDescription.includes(searchQuery) || resourceNames.includes(searchQuery);
-  });
+    // Filter factors based on search query
+    let filteredFactors = allFactors.filter(f => {
+      return f.name.toLowerCase().includes(searchQuery) || (f.description && f.description.toLowerCase().includes(searchQuery));
+    });
 
-  // Sort filtered factors alphabetically by name
-  filteredFactors.sort((a, b) => a.name.localeCompare(b.name));
+    // Sort filtered factors alphabetically by name
+    filteredFactors.sort((a, b) => a.name.localeCompare(b.name));
 
-  const tbody = document.querySelector('#ef-table tbody');
-  tbody.innerHTML = '';
+    const tbody = document.querySelector('#ef-table tbody');
+    tbody.innerHTML = '';
 
-  // Limit the number of displayed items
-  const displayLimit = window.userPreferences.maxEstimationFactors;
-  const itemsToDisplay = filteredFactors.slice(0, displayLimit);
+    // Limit the number of displayed items
+    const displayLimit = window.userPreferences.maxEstimationFactors;
+    const itemsToDisplay = filteredFactors.slice(0, displayLimit);
 
-  itemsToDisplay.forEach(f => {
-    const hrs = f.hoursPerResourceType || {};
-    const names = Object.entries(hrs).filter(([,v])=>v>0).map(([id])=>{ const r=window.rtList.find(x=>x.id===id); return r?r.name:id; }).join(',');
-    const total = Object.values(hrs).reduce((a,b)=>a+b,0), days = (total/8).toFixed(1);
-    const createdDate = formatDateInEST(f.created_at, true);
-    const updatedDate = formatDateInEST(f.updated_at, true);
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${f.name}</td><td>${names}</td><td>${days}</td><td>${total}</td><td style="white-space:nowrap;"><button onclick=\"window.editEF('${f.id}')\">Edit</button><button onclick=\"window.delEF('${f.id}')\" style=\"background:var(--red)\">Del</button><button onclick="window.showAuditTrailEF('${f.id}', '${f.name}')">🔍</button></td>`;
-    tbody.appendChild(tr);
-  });
+    itemsToDisplay.forEach(f => {
+      const hrs = f.hoursPerResourceType || {};
+      const names = Object.entries(hrs).filter(([,v])=>v>0).map(([id])=>{ const r=window.rtList.find(x=>x.id===id); return r?r.name:id; }).join(',');
+      const total = Object.values(hrs).reduce((a,b)=>a+b,0), days = (total/8).toFixed(1);
+      const createdDate = formatDateInEST(f.created_at, true);
+      const updatedDate = formatDateInEST(f.updated_at, true);
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${f.name}</td><td>${names}</td><td>${days}</td><td>${total}</td><td style="white-space:nowrap;"><button onclick=\"window.editEF('${f.id}')\">Edit</button><button onclick=\"window.delEF('${f.id}')\" style=\"background:var(--red)\">Del</button><button onclick="window.showAuditTrailEF('${f.id}', '${f.name}')">🔍</button></td>`;
+      tbody.appendChild(tr);
+    });
+  } catch (error) {
+    console.error('Error loading estimation factors:', error);
+    showMessage('Error', 'Failed to load estimation factors.', 'error');
+  }
 }
 async function addEstimationFactor() { // Made async to await loadRT()
   await loadRT(); // Ensure resource types are loaded before rendering the grid
@@ -1139,7 +1154,12 @@ async function editEF(id) { // Made async to fetch full factor data
 }
 async function delEF(id) { 
   if(!confirm('Delete?')) return; 
-  await fetch(API+`/api/estimation-factors/${id}`,{method:'DELETE'}); loadEF(); 
+  try {
+    await fetch(API+`/api/estimation-factors/${id}`,{method:'DELETE'}); loadEF(); 
+  } catch (error) {
+    console.error('Error deleting estimation factor:', error);
+    showMessage('Error', 'Failed to delete estimation factor.', 'error');
+  }
 }
 async function saveEstimationFactor() {
   const id=document.getElementById('ef-id').value.trim(), name=document.getElementById('ef-name').value.trim(); if(!name){showMessage('Error', 'Name required', 'error');return;}
@@ -1154,8 +1174,13 @@ async function saveEstimationFactor() {
   };
 
   const url=id?`/api/estimation-factors/${id}`:'/api/estimation-factors', method=id?'PUT':'POST';
-  const res=await fetch(API+url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-  if(!res.ok){showMessage('Error', 'Error:'+res.status, 'error');return;} closeModal('ef'); loadEF();
+  try {
+    const res=await fetch(API+url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!res.ok){showMessage('Error', 'Error:'+res.status, 'error');return;} closeModal('ef'); loadEF();
+  } catch (error) {
+    console.error('Error saving estimation factor:', error);
+    showMessage('Error', 'Failed to save estimation factor.', 'error');
+  }
 }
 
 // Factors Modal and T-Shirt Sizing
@@ -1418,6 +1443,10 @@ function updateDateCalculations() {
 function renderJournalLog() {
     const journalLogDiv = document.getElementById('initiative-journal-log');
     journalLogDiv.innerHTML = ''; // Clear existing entries
+
+    // Add this new log at the very beginning
+    console.log('renderJournalLog called. Journal entries count:', window.currentInitiativeJournal ? window.currentInitiativeJournal.length : 0);
+
     if (window.currentInitiativeJournal && window.currentInitiativeJournal.length > 0) {
         // Sort entries by timestamp in ASCENDING order (oldest first)
         const sortedJournal = [...window.currentInitiativeJournal].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -1429,22 +1458,37 @@ function renderJournalLog() {
             if (entry.type === 'audit') {
                 entryDiv.classList.add('audit');
                 let details = '';
-                // Ensure oldData and newData are objects, even if they were empty strings or null
-                const oldData = typeof entry.old_data === 'object' && entry.old_data !== null ? entry.old_data : {};
-                const newData = typeof entry.new_data === 'object' && entry.new_data !== null ? entry.new_data : {};
+                // --- DEBUGGING LOGS FOR renderJournalLog ---
+                console.log('renderJournalLog - Audit Entry Type:', entry.type);
+                console.log('renderJournalLog - Audit Action:', entry.action);
+                console.log('renderJournalLog - Raw old_data:', entry.old_data);
+                console.log('renderJournalLog - Raw new_data:', entry.new_data);
+                // --- END DEBUGGING LOGS ---
+
+                // CRITICAL FIX: Ensure old_data and new_data are parsed as they are strings from backend
+                const oldData = JSON.parse(entry.old_data || '{}');
+                const newData = JSON.parse(entry.new_data || '{}');
+
+                console.log('renderJournalLog - Parsed Old Data:', oldData); // DEBUG LOG
+                console.log('renderJournalLog - Parsed New Data:', newData); // DEBUG LOG
 
                 if (entry.action === 'created') {
                     details = `Created with estimated hours: ${newData.computed_hours} and size: ${newData.shirt_size}.`;
                 } else if (entry.action === 'updated') {
                     // CRITICAL FIX: Ensure selected_factors are parsed into arrays
+                    // These are already strings nested within oldData/newData which are themselves objects from the JSON.parse above.
                     const oldFactors = JSON.parse(oldData.selected_factors || '[]');
                     const newFactors = JSON.parse(newData.selected_factors || '[]');
+
+                    console.log('renderJournalLog - Parsed Old Factors:', oldFactors); // DEBUG LOG
+                    console.log('renderJournalLog - Parsed New Factors:', newFactors); // DEBUG LOG
 
                     const diffs = [];
                     const keysToCompare = [
                         'name', 'custom_id', 'description', 'priority', 'priority_num',
                         'status', 'classification', 'scope', 'out_of_scope',
-                        'computed_hours', 'shirt_size', 'start_date', 'end_date'
+                        'computed_hours', 'shirt_size', 'start_date', 'end_date',
+                        'confidence', 'estimation_type' // Added new fields for audit
                     ];
 
                     for (const key of keysToCompare) {
@@ -1490,6 +1534,7 @@ function renderJournalLog() {
                         });
                     }
                     details = diffs.length > 0 ? diffs.join('<br>') : 'No changes to tracked fields.';
+                    console.log('renderJournalLog - Diffs:', diffs); // DEBUG LOG
                 } else if (entry.action === 'duplicated_from') { // New audit type
                     details = `Duplicated from: ${entry.original_name}.`;
                 }
@@ -1587,50 +1632,45 @@ function renderJournalLogEF() {
             if (entry.type === 'audit') {
                 entryDiv.classList.add('audit');
                 let details = '';
-                // Ensure oldData and newData are objects, even if they were empty strings or null
-                const oldData = typeof entry.old_data === 'object' && entry.old_data !== null ? entry.old_data : {};
-                const newData = typeof entry.new_data === 'object' && entry.new_data !== null ? entry.new_data : {};
+                // Ensure old_data and new_data are parsed as they are strings from backend
+                const oldData = JSON.parse(entry.old_data || '{}');
+                const newData = JSON.parse(entry.new_data || '{}');
 
-                // console.log('DEBUG: EF Audit Entry - Action:', entry.action); // Debugging
-                // console.log('DEBUG: EF Audit Entry - Old Data:', oldData); // Debugging
-                // console.log('DEBUG: EF Audit Entry - New Data:', newData); // Debugging
-                // console.log('DEBUG: EF Audit Entry - New Data Name:', newData.name); // Debugging
-
-                if (entry.action === 'created') {
-                    details = `Created factor: ${newData.name ? newData.name : 'N/A'}.`; // Robust check for name
-                } else if (entry.action === 'updated') {
-                    const diffs = [];
-                    // Compare name
-                    if (oldData.name !== newData.name) {
-                        diffs.push(`- Changed name from <span class="diff-removed">${oldData.name || '""'}</span> to <span class="diff-added">${newData.name || '""'}</span>`);
-                    }
-                    // Compare description
-                    if (oldData.description !== newData.description) {
-                        diffs.push(`- Changed description from <span class="diff-removed">${oldData.description || '""'}</span> to <span class="diff-added">${newData.description || '""'}</span>`);
-                    }
-
-                    // Compare hoursPerResourceType
-                    const oldHours = oldData.hoursPerResourceType || {};
-                    const newHours = newData.hoursPerResourceType || {};
-
-                    const allResourceIds = new Set([...Object.keys(oldHours), ...Object.keys(newHours)]);
-                    allResourceIds.forEach(resId => {
-                        const oldVal = oldHours[resId] || 0;
-                        const newVal = newHours[resId] || 0;
-                        const resourceName = window.rtList.find(r => r.id === resId)?.name || resId; // Get resource name
-
-                        if (oldVal === 0 && newVal > 0) {
-                            diffs.push(`- <span class="diff-added">Added resource ${resourceName} with ${newVal}h</span>`);
-                        } else if (oldVal > 0 && newVal === 0) {
-                            diffs.push(`- <span class="diff-removed">Removed resource ${resourceName} (was ${oldVal}h)</span>`);
-                        } else if (oldVal !== newVal) {
-                            diffs.push(`- Changed hours for ${resourceName} from <span class="diff-removed">${oldVal}h</span> to <span class="diff-added">${newVal}h</span>`);
+                    if (entry.action === 'created') {
+                        details = `Created factor: ${newData.name ? newData.name : 'N/A'}.`; // Robust check for name
+                    } else if (entry.action === 'updated') {
+                        const diffs = [];
+                        // Compare name
+                        if (oldData.name !== newData.name) {
+                            diffs.push(`- Changed name from <span class="diff-removed">${oldData.name || '""'}</span> to <span class="diff-added">${newData.name || '""'}</span>`);
                         }
-                    });
-                    details = diffs.length > 0 ? diffs.join('<br>') : 'No changes to tracked fields.';
-                } else if (entry.action === 'duplicated_from') { // New audit type
-                    details = `Duplicated from: ${entry.original_name}.`;
-                }
+                        // Compare description
+                        if (oldData.description !== newData.description) {
+                            diffs.push(`- Changed description from <span class="diff-removed">${oldData.description || '""'}</span> to <span class="diff-added">${newData.description || '""'}</span>`);
+                        }
+
+                        // Compare hoursPerResourceType
+                        const oldHours = oldData.hoursPerResourceType || {};
+                        const newHours = newData.hoursPerResourceType || {};
+
+                        const allResourceIds = new Set([...Object.keys(oldHours), ...Object.keys(newHours)]);
+                        allResourceIds.forEach(resId => {
+                            const oldVal = oldHours[resId] || 0;
+                            const newVal = newHours[resId] || 0;
+                            const resourceName = window.rtList.find(r => r.id === resId)?.name || resId; // Get resource name
+
+                            if (oldVal === 0 && newVal > 0) {
+                                diffs.push(`- <span class="diff-added">Added resource ${resourceName} with ${newVal}h</span>`);
+                            } else if (oldVal > 0 && newVal === 0) {
+                                diffs.push(`- <span class="diff-removed">Removed resource ${resourceName} (was ${oldVal}h)</span>`);
+                            } else if (oldVal !== newVal) {
+                                diffs.push(`- Changed hours for ${resourceName} from <span class="diff-removed">${oldVal}h</span> to <span class="diff-added">${newVal}h</span>`);
+                            }
+                        });
+                        details = diffs.length > 0 ? diffs.join('<br>') : 'No changes to tracked fields.';
+                    } else if (entry.action === 'duplicated_from') { // New audit type
+                        details = `Duplicated from: ${entry.original_name}.`;
+                    }
                 entryDiv.innerHTML = `<span class="timestamp">${formattedDate}</span><h4>${entry.action.charAt(0).toUpperCase() + entry.action.slice(1).replace(/_/g, ' ')}</h4><p>${details}</p>`;
             } else { // type === 'comment'
                 entryDiv.innerHTML = `<span class="timestamp">${formattedDate}</span>${entry.text}`;
@@ -1673,79 +1713,84 @@ function addJournalCommentEF() {
 
 // Initiatives CRUD
 async function loadInitiatives(sortBy = 'created_at', sortDirection = 'desc') {
-  const res = await fetch(API + '/api/initiatives');
-  let allInitiatives = await res.json();
-  window.initList = allInitiatives; // Store all initiatives
+  try {
+    const res = await fetch(API + '/api/initiatives');
+    let allInitiatives = await res.json();
+    window.initList = allInitiatives; // Store all initiatives
 
-  const searchQuery = document.getElementById('init-search-input')?.value.toLowerCase() || '';
+    const searchQuery = document.getElementById('init-search-input')?.value.toLowerCase() || '';
 
-  // Filter initiatives based on search query
-  let filteredInitiatives = allInitiatives.filter(i => {
-    return i.name.toLowerCase().includes(searchQuery) || 
-           (i.custom_id && i.custom_id.toLowerCase().includes(searchQuery)) ||
-           (i.description && i.description.toLowerCase().includes(searchQuery));
-  });
+    // Filter initiatives based on search query
+    let filteredInitiatives = allInitiatives.filter(i => {
+      return i.name.toLowerCase().includes(searchQuery) || 
+             (i.custom_id && i.custom_id.toLowerCase().includes(searchQuery)) ||
+             (i.description && i.description.toLowerCase().includes(searchQuery));
+    });
 
-  // Sort the filtered list based on sortBy and sortDirection
-  filteredInitiatives.sort((a, b) => {
-    let valA = a[sortBy];
-    let valB = b[sortBy];
+    // Sort the filtered list based on sortBy and sortDirection
+    filteredInitiatives.sort((a, b) => {
+      let valA = a[sortBy];
+      let valB = b[sortBy];
 
-    // Handle numeric sorting
-    if (sortBy === 'id' || sortBy === 'computed_hours' || sortBy === 'priority_num') {
-        valA = parseFloat(valA);
-        valB = parseFloat(valB);
-    } 
-    // Handle date sorting (ISO strings can be compared directly)
-    else if (sortBy.includes('_date') || sortBy.includes('_at')) {
-        valA = valA ? new Date(valA).getTime() : 0; // Treat null/empty dates as 0 for sorting
-        valB = valB ? new Date(valB).getTime() : 0;
-    }
-    // Default to string comparison for others
-    else {
-        valA = String(valA || '').toLowerCase();
-        valB = String(valB || '').toLowerCase();
-    }
-
-    if (valA < valB) {
-      return sortDirection === 'asc' ? -1 : 1;
-    }
-    if (valA > valB) {
-      return sortDirection === 'asc' ? 1 : -1;
-    }
-    return 0;
-  });
-
-  const tbody = document.querySelector('#init-table tbody');
-  tbody.innerHTML = '';
-
-  // Limit the number of displayed items
-  const displayLimit = window.userPreferences.maxInitiatives;
-  const itemsToDisplay = filteredInitiatives.slice(0, displayLimit);
-
-  itemsToDisplay.forEach(i => {
-    const createdDate = formatDateInEST(i.created_at, true); // Format in EST with time
-    const updatedDate = formatDateInEST(i.updated_at, true); // Format in EST with time
-    const startDate = formatDateInEST(i.start_date, false); // Format in EST (date only)
-    const endDate = formatDateInEST(i.end_date, false); // Format in EST (date only)
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i.id || ''}</td><td>${i.custom_id || ''}</td><td>${i.name}</td><td>${i.status || ''}</td><td>${i.shirt_size || ''}</td><td>${i.computed_hours || 0}</td><td>${startDate}</td><td>${endDate}</td><td>${createdDate}</td><td>${updatedDate}</td><td style="white-space:nowrap;"><button onclick="window.editInitiative(${i.id})">Edit</button><button onclick="window.deleteInitiative(${i.id})" style="background:var(--red)">Del</button><button onclick="window.showAuditTrail('${i.id}', '${i.name}')">🔍</button></td>`;
-    tbody.appendChild(tr);
-  });
-
-  // Update sort indicators in table headers
-  document.querySelectorAll('#init-table th.sortable-th').forEach(th => {
-    const arrowSpan = th.querySelector('.sort-arrow');
-    if (arrowSpan) {
-      arrowSpan.textContent = ''; // Clear existing arrow
-      if (th.dataset.sort === sortBy) {
-        arrowSpan.textContent = sortDirection === 'asc' ? ' ▲' : ' ▼';
+      // Handle numeric sorting
+      if (sortBy === 'id' || sortBy === 'computed_hours' || sortBy === 'priority_num') {
+          valA = parseFloat(valA);
+          valB = parseFloat(valB);
+      } 
+      // Handle date sorting (ISO strings can be compared directly)
+      else if (sortBy.includes('_date') || sortBy.includes('_at')) {
+          valA = valA ? new Date(valA).getTime() : 0; // Treat null/empty dates as 0 for sorting
+          valB = valB ? new Date(valB).getTime() : 0;
       }
-    }
-  });
+      // Default to string comparison for others
+      else {
+          valA = String(valA || '').toLowerCase();
+          valB = String(valB || '').toLowerCase();
+      }
 
-  // Re-attach sort event listeners after table content is rendered
-  setupInitiativeTableSorting();
+      if (valA < valB) {
+        return sortDirection === 'asc' ? -1 : 1;
+      }
+      if (valA > valB) {
+        return sortDirection === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+
+    const tbody = document.querySelector('#init-table tbody');
+    tbody.innerHTML = '';
+
+    // Limit the number of displayed items
+    const displayLimit = window.userPreferences.maxInitiatives;
+    const itemsToDisplay = filteredInitiatives.slice(0, displayLimit);
+
+    itemsToDisplay.forEach(i => {
+      const createdDate = formatDateInEST(i.created_at, true); // Format in EST with time
+      const updatedDate = formatDateInEST(i.updated_at, true); // Format in EST with time
+      const startDate = formatDateInEST(i.start_date, false); // Format in EST (date only)
+      const endDate = formatDateInEST(i.end_date, false); // Format in EST (date only)
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i.id || ''}</td><td>${i.custom_id || ''}</td><td>${i.name}</td><td>${i.status || ''}</td><td>${i.shirt_size || ''}</td><td>${i.computed_hours || 0}</td><td>${startDate}</td><td>${endDate}</td><td>${createdDate}</td><td>${updatedDate}</td><td style="white-space:nowrap;"><button onclick="window.editInitiative(${i.id})">Edit</button><button onclick="window.deleteInitiative(${i.id})" style="background:var(--red)">Del</button><button onclick="window.showAuditTrail('${i.id}', '${i.name}')">🔍</button></td>`;
+      tbody.appendChild(tr);
+    });
+
+    // Update sort indicators in table headers
+    document.querySelectorAll('#init-table th.sortable-th').forEach(th => {
+      const arrowSpan = th.querySelector('.sort-arrow');
+      if (arrowSpan) {
+        arrowSpan.textContent = ''; // Clear existing arrow
+        if (th.dataset.sort === sortBy) {
+          arrowSpan.textContent = sortDirection === 'asc' ? ' ▲' : ' ▼';
+        }
+      }
+    });
+
+    // Re-attach sort event listeners after table content is rendered
+    setupInitiativeTableSorting();
+  } catch (error) {
+    console.error('Error loading initiatives:', error);
+    showMessage('Error', 'Failed to load initiatives.', 'error');
+  }
 }
 
 function addInitiative() {
@@ -1756,6 +1801,8 @@ function addInitiative() {
     document.getElementById('init-priority').value = 'Low';
     document.getElementById('init-priority-num').value = '';
     document.getElementById('init-status').value = 'To Do';
+    document.getElementById('init-confidence').value = 'Low'; // Set default for new field
+    document.getElementById('init-estimation-type').value = 'WAG'; // Set default for new field
     document.getElementById('init-start-date').value = '';
     document.getElementById('init-end-date').value = '';
     document.getElementById('init-scope').value = '';
@@ -1794,6 +1841,8 @@ function editInitiative(id) {
     document.getElementById('init-priority').value = init.priority || 'Low';
     document.getElementById('init-priority-num').value = init.priority_num || '';
     document.getElementById('init-status').value = init.status || 'To Do';
+    document.getElementById('init-confidence').value = init.confidence || 'Low'; // Load new field
+    document.getElementById('init-estimation-type').value = init.estimation_type || 'WAG'; // Load new field
     document.getElementById('init-start-date').value = init.start_date ? init.start_date.substring(0, 10) : '';
     document.getElementById('init-end-date').value = init.end_date ? init.end_date.substring(0, 10) : '';
     document.getElementById('init-scope').value = init.scope || '';
@@ -1811,7 +1860,12 @@ function editInitiative(id) {
 }
 async function deleteInitiative(id){ 
   if(!confirm('Delete?')) return; 
-  await fetch(API+`/api/initiatives/${id}`,{method:'DELETE'}); loadInitiatives(); 
+  try {
+    await fetch(API+`/api/initiatives/${id}`,{method:'DELETE'}); loadInitiatives(); 
+  } catch (error) {
+    console.error('Error deleting initiative:', error);
+    showMessage('Error', 'Failed to delete initiative.', 'error');
+  }
 }
 async function saveInitiative(){ 
     const id=document.getElementById('init-id').value.trim(); 
@@ -1822,6 +1876,8 @@ async function saveInitiative(){
     const priority=document.getElementById('init-priority').value; 
     const priorityNum=+document.getElementById('init-priority-num').value||0; 
     const status=document.getElementById('init-status').value; 
+    const confidence=document.getElementById('init-confidence').value; // Get new field
+    const estimationType=document.getElementById('init-estimation-type').value; // Get new field
     const start_date=document.getElementById('init-start-date').value.trim();
     const end_date=document.getElementById('init-end-date').value.trim();
     const classification='Internal'; 
@@ -1835,6 +1891,8 @@ async function saveInitiative(){
         priority,
         priority_num: priorityNum,
         status,
+        confidence, // Add new field to payload
+        estimation_type: estimationType, // Add new field to payload
         classification,
         scope,
         out_of_scope: outOf,
@@ -1845,10 +1903,40 @@ async function saveInitiative(){
     }; 
     const url=id?`/api/initiatives/${id}`:'/api/initiatives'; 
     const method=id?'PUT':'POST'; 
-    const res=await fetch(API+url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); 
-    if (!res.ok) { showMessage('Error', 'Error:' + res.status, 'error'); return; }
+    
+    let saveSuccess = false;
+    try {
+        const res=await fetch(API+url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); 
+        if (!res.ok) { 
+            showMessage('Error', 'Error:' + res.status, 'error'); 
+            return; 
+        }
+        saveSuccess = true;
+    } catch (error) {
+        console.error('Error saving initiative:', error);
+        showMessage('Error', 'Failed to save initiative: ' + error.message, 'error');
+        return;
+    }
+
+    // If save was successful and it's an existing initiative, re-fetch its data
+    if (saveSuccess && id) {
+        try {
+            const updatedInitRes = await fetch(API + `/api/initiatives/${id}`);
+            if (updatedInitRes.ok) {
+                const updatedInit = await updatedInitRes.json();
+                window.currentInitiativeJournal = updatedInit.journal_entries || [];
+                document.getElementById('init-updated').textContent = formatDateInEST(updatedInit.updated_at);
+                renderJournalLog(); // Re-render journal with latest entries
+            } else {
+                console.error('Failed to re-fetch initiative after save:', updatedInitRes.status);
+            }
+        } catch (error) {
+            console.error('Error re-fetching initiative after save:', error);
+        }
+    }
+
     closeModal('init'); 
-    loadInitiatives(); 
+    loadInitiatives(currentSortColumn, currentSortDirection); // Pass sort state
 }
 
 async function duplicateInitiative() {
@@ -1861,6 +1949,8 @@ async function duplicateInitiative() {
     const priority = document.getElementById('init-priority').value;
     const priorityNum = +document.getElementById('init-priority-num').value || 0;
     const status = document.getElementById('init-status').value;
+    const confidence = document.getElementById('init-confidence').value; // Get new field
+    const estimationType = document.getElementById('init-estimation-type').value; // Get new field
     const start_date = document.getElementById('init-start-date').value.trim();
     const end_date = document.getElementById('init-end-date').value.trim();
     const classification = 'Internal'; // Default for duplicated
@@ -1881,6 +1971,8 @@ async function duplicateInitiative() {
         priority,
         priority_num: priorityNum,
         status,
+        confidence, // Copy new field
+        estimation_type: estimationType, // Copy new field
         classification,
         scope,
         out_of_scope: outOf,
@@ -1939,23 +2031,31 @@ async function showAuditTrail(initiativeId, initiativeName) {
                 let details = '';
                 if (entry.type === 'audit') {
                     logItem.classList.add('audit'); // Add audit class for styling
-                    // Ensure oldData and newData are objects, even if they were empty strings or null
-                    const oldData = typeof entry.old_data === 'object' && entry.old_data !== null ? entry.old_data : {};
-                    const newData = typeof entry.new_data === 'object' && entry.new_data !== null ? entry.new_data : {};
+                    // CRITICAL FIX: Ensure old_data and new_data are parsed as they are strings from backend
+                    const oldData = JSON.parse(entry.old_data || '{}');
+                    const newData = JSON.parse(entry.new_data || '{}');
+
+                    // --- DEBUGGING LOGS ---
+                    console.log('Audit Entry Type:', entry.type);
+                    console.log('Audit Action:', entry.action);
+                    console.log('Old Data:', oldData);
+                    console.log('New Data:', newData);
+                    // --- END DEBUGGING LOGS ---
 
                     if (entry.action === 'created') {
                         details = `Created with estimated hours: ${newData.computed_hours} and size: ${newData.shirt_size}.`;
                     } else if (entry.action === 'updated') {
                         // CRITICAL FIX: Ensure selected_factors are parsed into arrays
+                        // These are already strings nested within oldData/newData which are themselves objects from the JSON.parse above.
                         const oldFactors = JSON.parse(oldData.selected_factors || '[]');
                         const newFactors = JSON.parse(newData.selected_factors || '[]');
 
                         const diffs = [];
-                        // Keys to compare for audit log (excluding internal/timestamp fields)
                         const keysToCompare = [
                             'name', 'custom_id', 'description', 'priority', 'priority_num',
                             'status', 'classification', 'scope', 'out_of_scope',
-                            'computed_hours', 'shirt_size', 'start_date', 'end_date'
+                            'computed_hours', 'shirt_size', 'start_date', 'end_date',
+                            'confidence', 'estimation_type' // Added new fields for audit
                         ];
 
                         for (const key of keysToCompare) {
@@ -1970,7 +2070,6 @@ async function showAuditTrail(initiativeId, initiativeName) {
                                     diffs.push(`- Changed ${key} from <span class="diff-removed">${oldDate}</span> to <span class="diff-added">${newDate}</span>`);
                                 }
                             } else {
-                                // Compare other fields directly.
                                 if (oldValue !== newValue) {
                                     diffs.push(`- Changed ${key} from <span class="diff-removed">${oldValue}</span> to <span class="diff-added">${newValue}</span>`);
                                 }
@@ -2002,6 +2101,7 @@ async function showAuditTrail(initiativeId, initiativeName) {
                             });
                         }
                         details = diffs.length > 0 ? diffs.join('<br>') : 'No changes to tracked fields.';
+                        console.log('Diffs:', diffs); // DEBUG LOG
                     } else if (entry.action === 'deleted') {
                         details = 'Initiative was deleted.'; // This entry would only exist if we had a separate audit table for deletions
                     } else if (entry.action === 'duplicated_from') { // New audit type
@@ -2051,9 +2151,9 @@ async function showAuditTrailEF(factorId, factorName) {
                 let details = '';
                 if (entry.type === 'audit') {
                     logItem.classList.add('audit');
-                    // Ensure oldData and newData are objects, even if they were empty strings or null
-                    const oldData = typeof entry.old_data === 'object' && entry.old_data !== null ? entry.old_data : {};
-                    const newData = typeof entry.new_data === 'object' && entry.new_data !== null ? entry.new_data : {};
+                    // CRITICAL FIX: Ensure old_data and new_data are parsed as they are strings from backend
+                    const oldData = JSON.parse(entry.old_data || '{}');
+                    const newData = JSON.parse(entry.new_data || '{}');
 
                     if (entry.action === 'created') {
                         details = `Created factor: ${newData.name ? newData.name : 'N/A'}.`; // Robust check for name
@@ -2090,20 +2190,19 @@ async function showAuditTrailEF(factorId, factorName) {
                     } else if (entry.action === 'duplicated_from') { // New audit type
                         details = `Duplicated from: ${entry.original_name}.`;
                     }
-                    logItem.innerHTML = `
+                entryDiv.innerHTML = `
                         <h4>${entry.action.charAt(0).toUpperCase() + entry.action.slice(1).replace(/_/g, ' ')} on ${formatDateInEST(entry.timestamp)}</h4>
                         <p>${details}</p>
                     `;
                 } else { // type === 'comment'
                     logItem.innerHTML = `
-                        <h4>Comment on ${formatDateInEST(entry.timestamp)}</h4>
+                        <h4>Comment on ${formattedDate}</h4>
                         <p>${entry.text}</p>
                     `;
                 }
                 auditContent.appendChild(logItem);
             });
         }
-
     } catch (err) {
         auditContent.innerHTML = `<p style="color:var(--red);">Error fetching audit trail: ${err.message || err}</p>`;
     }
@@ -2166,18 +2265,23 @@ async function duplicateEstimationFactor() {
 
 // Shirt Sizes Configuration
 async function loadShirtSizes() {
-    const res = await fetch(API + '/api/shirt-sizes');
-    const sizes = await res.json();
-    window.shirtSizes = sizes;
-    const tbody = document.querySelector('#shirt-size-table tbody');
-    tbody.innerHTML = '';
-    sizes.forEach(size => {
-        const days = (size.threshold_hours / 8).toFixed(1);
-        const months = (size.threshold_hours / 160).toFixed(1); // Updated to 160 hours/month
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${size.size}</td><td><input type="number" min="0" value="${size.threshold_hours}" oninput="window.updateCalculatedValues(this)"></td><td id="days-${size.size}">${days}</td><td id="months-${size.size}">${months}</td>`;
-        tbody.appendChild(tr);
-    });
+    try {
+      const res = await fetch(API + '/api/shirt-sizes');
+      const sizes = await res.json();
+      window.shirtSizes = sizes;
+      const tbody = document.querySelector('#shirt-size-table tbody');
+      tbody.innerHTML = '';
+      sizes.forEach(size => {
+          const days = (size.threshold_hours / 8).toFixed(1);
+          const months = (size.threshold_hours / 160).toFixed(1); // Updated to 160 hours/month
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${size.size}</td><td><input type="number" min="0" value="${size.threshold_hours}" oninput="window.updateCalculatedValues(this)"></td><td id="days-${size.size}">${days}</td><td id="months-${size.size}">${months}</td>`;
+          tbody.appendChild(tr);
+      });
+    } catch (error) {
+      console.error('Error loading shirt sizes:', error);
+      showMessage('Error', 'Failed to load shirt sizes.', 'error');
+    }
 }
 
 function updateCalculatedValues(inputElement) {
@@ -2268,7 +2372,8 @@ async function exportInitiatives() {
 
         const headers = [
             "Internal ID", "User-Defined ID", "Name", "Description", "Priority", "Priority Number",
-            "Status", "Classification", "Scope", "Out of Scope",
+            "Status", "Confidence", "Estimation Type", // Added new headers
+            "Classification", "Scope", "Out of Scope",
             "Estimated Hours", "Estimated Days", "Estimated Months", "Shirt Size",
             "Start Date", "End Date",
             "Selected Factors", "Created At", "Updated At"
@@ -2303,6 +2408,8 @@ async function exportInitiatives() {
                 initiative.priority || '',
                 initiative.priority_num || 0,
                 initiative.status || '',
+                initiative.confidence || '', // Add new field
+                initiative.estimation_type || '', // Add new field
                 initiative.classification || '',
                 initiative.scope || '',
                 initiative.out_of_scope || '',
@@ -2362,7 +2469,7 @@ async function exportResourceView() {
         const estimationFactors = window.efList;
 
         const headers = [
-            "Internal ID", "User-Defined ID", "Name", "Created", "Updated", "Status", "Shirt Size",
+            "Internal ID", "User-Defined ID", "Name", "Created", "Updated", "Status", "Confidence", "Estimation Type", "Shirt Size", // Added new headers
             "Start Date", "End Date", "Resource Type", "Factor", "Factor Hours"
         ];
         const rows = [headers.join('\t')];
@@ -2380,6 +2487,8 @@ async function exportResourceView() {
                 createdDate,
                 updatedDate,
                 initiative.status || '',
+                initiative.confidence || '', // Add new field
+                initiative.estimation_type || '', // Add new field
                 initiative.shirt_size || '',
                 startDate,
                 endDate
@@ -2473,7 +2582,8 @@ async function handleImportFile(event) {
             // The order here matters for parsing the TSV columns
             const expectedHeaders = [
                 "User-Defined ID", "Name", "Description", "Priority", "Priority Number",
-                "Status", "Start Date", "End Date", "In Scope", "Out of Scope"
+                "Status", "Confidence", "Estimation Type", // Added new headers for import
+                "Start Date", "End Date", "In Scope", "Out of Scope"
             ];
             
             const headerMap = {
@@ -2483,6 +2593,8 @@ async function handleImportFile(event) {
                 "Priority": "priority",
                 "Priority Number": "priority_num",
                 "Status": "status",
+                "Confidence": "confidence", // Added new mapping
+                "Estimation Type": "estimation_type", // Added new mapping
                 "Start Date": "start_date",
                 "End Date": "end_date",
                 "In Scope": "scope",
@@ -2539,6 +2651,9 @@ async function handleImportFile(event) {
                 initiative.journal_entries = []; // As per request, no comments on import
                 initiative.status = initiative.status || 'To Do'; // Default status if not provided
                 initiative.priority = initiative.priority || 'Low'; // Default priority if not provided
+                initiative.confidence = initiative.confidence || 'Low'; // Default confidence if not provided
+                initiative.estimation_type = initiative.estimation_type || 'WAG'; // Default estimation type if not provided
+
 
                 initiativesToImport.push(initiative);
             }

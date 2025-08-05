@@ -265,9 +265,9 @@ export async function createApp() {
         } catch (e) {
           console.error("Error parsing new_data in audit entry:", e, entry.new_data);
           entry.new_data = {}; // Default to empty object on error
+          }
         }
-      }
-    });
+      });
     res.json(row);
   });
 
@@ -842,101 +842,4 @@ export async function createApp() {
       let changesDetected = false;
       const efKeysToCompare = ['name', 'description'];
       for (const key of efKeysToCompare) {
-        if (oldDataForAudit[key] !== newDataForAudit[key]) {
-          changesDetected = true;
-          break;
-        }
-      }
-
-      // Use the new helper for hoursPerResourceType comparison
-      if (!areHoursPerResourceTypeEqual(oldDataForAudit.hoursPerResourceType, newDataForAudit.hoursPerResourceType)) {
-        changesDetected = true;
-      }
-
-      if (changesDetected) {
-        const auditEntry = {
-          timestamp: now,
-          type: 'audit',
-          action: 'updated',
-          old_data: JSON.stringify(oldDataForAudit),
-          new_data: JSON.stringify(newDataForAudit)
-        };
-        newJournalEntries.push(auditEntry);
-      }
-
-      // Update the journal_entries in the database again with the new audit entry
-      try {
-        await db.run('UPDATE estimation_factors SET journal_entries = ? WHERE id = ?', [JSON.stringify(newJournalEntries), id]);
-      } catch (err) {
-        console.error('Error updating EF journal entries with audit:', err);
-        return res.status(500).json({ message: 'Database error updating EF journal entries with audit' });
-      }
-
-      const updatedEF = await db.get('SELECT * FROM estimation_factors WHERE id = ?', [id]);
-      updatedEF.hoursPerResourceType = JSON.parse(updatedEF.hours_per_resource_type || '{}');
-      updatedEF.journal_entries = JSON.parse(updatedEF.journal_entries || '[]');
-      delete updatedEF.hours_per_resource_type;
-      res.json(updatedEF);
-    }
-  );
-
-  app.delete('/api/estimation-factors/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-      await db.run('DELETE FROM estimation_factors WHERE id = ?', [id]);
-      res.status(204).send();
-    } catch (err) {
-      console.error('Error deleting estimation factor:', err);
-      res.status(500).json({ message: 'Database error deleting estimation factor' });
-    }
-  });
-
-  // Routes for Shirt Sizes
-  app.get('/api/shirt-sizes', async (req, res) => {
-    const rows = await db.all('SELECT * FROM shirt_sizes ORDER BY threshold_hours');
-    res.json(rows);
-  });
-  
-  app.put('/api/shirt-sizes',
-    body().isArray(),
-    async (req, res) => {
-      const now = new Date().toISOString();
-      const newSizes = req.body;
-      const oldSizes = await db.all('SELECT * FROM shirt_sizes');
-
-      const dbUpdates = newSizes.map(size =>
-        db.run('UPDATE shirt_sizes SET threshold_hours=? WHERE size=?', [size.threshold_hours, size.size])
-      );
-      await Promise.all(dbUpdates);
-      
-      await db.run(
-        `INSERT INTO shirt_size_audit (id, action, old_data, new_data, timestamp) VALUES (?, ?, ?, ?, ?)`,
-        [uuid(), 'updated', JSON.stringify(oldSizes), JSON.stringify(newSizes), now]
-      );
-      
-      const updatedSizes = await db.all('SELECT * FROM shirt_sizes ORDER BY threshold_hours');
-      res.json(updatedSizes);
-    }
-  );
-
-  app.get('/api/shirt-sizes/audit', async (req, res) => {
-    const rows = await db.all('SELECT * FROM shirt_size_audit ORDER BY timestamp DESC');
-    res.json(rows);
-  });
-
-  return app;
-}
-
-if (import.meta.main) {
-  createApp()
-    .then(app => {
-      const port = process.env.PORT || 3000;
-      app.listen(port, () => {
-        console.log(`Estiim API listening on port ${port}`);
-      });
-    })
-    .catch(err => {
-      console.error('Failed to start Estiim API:', err);
-      process.exit(1);
-    });
-}
+        if (oldDataForAu
