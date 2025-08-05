@@ -700,7 +700,7 @@ footer {
         <div class="initiative-details-left">
             <div class="flex"><input id="init-name" placeholder="Name" style="flex:1"><input id="init-custom-id" placeholder="User-Defined ID" style="flex:1"></div>
             <textarea id="init-desc" placeholder="Description" style="width:100%;margin-top:12px"></textarea>
-            <div class="flex" style="margin-top:12px"><div><label>Priority</label><br><select id="init-priority"><option>Low</option><option>Medium</option><option>High</option></select></div><div><label>Pri #</label><br><input id="init-priority-num" type="number" min="1" max="10"></div><div><label>Status</label><br><select id="init-status"><option>To Do</option><option>Draft</option><option>Proposal</option><option>Re-Estimation</option><option>Accepted</option><option>Rejected</option></select></div></div>
+            <div class="flex" style="margin-top:12px"><div><label>Priority</label><br><select id="init-priority"><option>Low</option><option>Medium</option><option>High</option></select></div><div><label>Pri #</label><br><input id="init-priority-num" type="number" min="1" max="10"></div><div><label>Status</label><br><select id="init-status"><option>To Do</option><option>Draft</option><option>Proposal</option><option>Re-Estimation</option><option>Accepted</option><option>Rejected</option><option>Done</option></select></div><div><label>Estimation Type</label><br><select id="init-estimation-type"><option>WAG</option><option>Low</option><option>Medium</option><option>High</option></select></div></div>
             <div class="flex" style="margin-top:12px"><div><label>Start Date</label><br><input id="init-start-date" type="date"></div><div><label>End Date</label><br><input id="init-end-date" type="date"></div></div>
             <textarea id="init-scope" placeholder="In Scope" style="width:100%;margin-top:12px"></textarea>
             <textarea id="init-out" placeholder="Out of Scope" style="width:100%;margin-top:12px"></textarea>
@@ -1443,7 +1443,7 @@ function renderJournalLog() {
                     const diffs = [];
                     const keysToCompare = [
                         'name', 'custom_id', 'description', 'priority', 'priority_num',
-                        'status', 'classification', 'scope', 'out_of_scope',
+                        'status', 'estimation_type', 'classification', 'scope', 'out_of_scope',
                         'computed_hours', 'shirt_size', 'start_date', 'end_date'
                     ];
 
@@ -1756,6 +1756,7 @@ function addInitiative() {
     document.getElementById('init-priority').value = 'Low';
     document.getElementById('init-priority-num').value = '';
     document.getElementById('init-status').value = 'To Do';
+    document.getElementById('init-estimation-type').value = 'WAG';
     document.getElementById('init-start-date').value = '';
     document.getElementById('init-end-date').value = '';
     document.getElementById('init-scope').value = '';
@@ -1794,6 +1795,7 @@ function editInitiative(id) {
     document.getElementById('init-priority').value = init.priority || 'Low';
     document.getElementById('init-priority-num').value = init.priority_num || '';
     document.getElementById('init-status').value = init.status || 'To Do';
+    document.getElementById('init-estimation-type').value = init.estimation_type || 'WAG';
     document.getElementById('init-start-date').value = init.start_date ? init.start_date.substring(0, 10) : '';
     document.getElementById('init-end-date').value = init.end_date ? init.end_date.substring(0, 10) : '';
     document.getElementById('init-scope').value = init.scope || '';
@@ -1822,6 +1824,7 @@ async function saveInitiative(){
     const priority=document.getElementById('init-priority').value; 
     const priorityNum=+document.getElementById('init-priority-num').value||0; 
     const status=document.getElementById('init-status').value; 
+    const estimationType=document.getElementById('init-estimation-type').value; 
     const start_date=document.getElementById('init-start-date').value.trim();
     const end_date=document.getElementById('init-end-date').value.trim();
     const classification='Internal'; 
@@ -1835,6 +1838,7 @@ async function saveInitiative(){
         priority,
         priority_num: priorityNum,
         status,
+        estimation_type: estimationType,
         classification,
         scope,
         out_of_scope: outOf,
@@ -1861,6 +1865,7 @@ async function duplicateInitiative() {
     const priority = document.getElementById('init-priority').value;
     const priorityNum = +document.getElementById('init-priority-num').value || 0;
     const status = document.getElementById('init-status').value;
+    const estimationType = document.getElementById('init-estimation-type').value;
     const start_date = document.getElementById('init-start-date').value.trim();
     const end_date = document.getElementById('init-end-date').value.trim();
     const classification = 'Internal'; // Default for duplicated
@@ -1881,6 +1886,7 @@ async function duplicateInitiative() {
         priority,
         priority_num: priorityNum,
         status,
+        estimation_type: estimationType,
         classification,
         scope,
         out_of_scope: outOf,
@@ -1954,7 +1960,7 @@ async function showAuditTrail(initiativeId, initiativeName) {
                         // Keys to compare for audit log (excluding internal/timestamp fields)
                         const keysToCompare = [
                             'name', 'custom_id', 'description', 'priority', 'priority_num',
-                            'status', 'classification', 'scope', 'out_of_scope',
+                            'status', 'estimation_type', 'classification', 'scope', 'out_of_scope',
                             'computed_hours', 'shirt_size', 'start_date', 'end_date'
                         ];
 

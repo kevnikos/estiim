@@ -36,6 +36,7 @@ export async function initializeDatabase() {
       priority TEXT,
       priority_num INTEGER,
       status TEXT,
+      estimation_type TEXT,
       classification TEXT,
       scope TEXT,
       out_of_scope TEXT,

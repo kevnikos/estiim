@@ -73,7 +73,7 @@ export default function createInitiativesRouter(db) {
 
       const now = new Date().toISOString();
       const {
-        name, custom_id, description, priority, priority_num, status,
+        name, custom_id, description, priority, priority_num, status, estimation_type,
         classification, scope, out_of_scope, selected_factors, journal_entries,
         start_date, end_date
       } = req.body;
@@ -92,7 +92,7 @@ export default function createInitiativesRouter(db) {
 
       const newJournalEntries = JSON.parse(JSON.stringify(journal_entries || []));
       const newDataForAudit = {
-        name, custom_id, description, priority, priority_num, status,
+        name, custom_id, description, priority, priority_num, status, estimation_type,
         classification, scope, out_of_scope,
         selected_factors: JSON.stringify(selected_factors || []),
         computed_hours: computedHours.toFixed(1),
@@ -109,10 +109,10 @@ export default function createInitiativesRouter(db) {
       newJournalEntries.push(auditEntry);
 
       const result = await db.run(
-        `INSERT INTO initiatives (name, custom_id, description, priority, priority_num, status, classification, scope, out_of_scope, selected_factors, computed_hours, shirt_size, journal_entries, start_date, end_date, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO initiatives (name, custom_id, description, priority, priority_num, status, estimation_type, classification, scope, out_of_scope, selected_factors, computed_hours, shirt_size, journal_entries, start_date, end_date, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          name, custom_id, description, priority, priority_num, status,
+          name, custom_id, description, priority, priority_num, status, estimation_type,
           classification, scope, out_of_scope,
           JSON.stringify(selected_factors || []),
           computedHours, shirtSize, JSON.stringify(newJournalEntries),
@@ -136,7 +136,7 @@ export default function createInitiativesRouter(db) {
         const { id } = req.params;
         const now = new Date().toISOString();
         const {
-            name, custom_id, description, priority, priority_num, status,
+            name, custom_id, description, priority, priority_num, status, estimation_type,
             classification, scope, out_of_scope, selected_factors, journal_entries,
             start_date, end_date
         } = req.body;
@@ -159,7 +159,7 @@ export default function createInitiativesRouter(db) {
         const newShirtSize = await getShirtSize(db, newComputedHours);
 
         const updateFields = {
-            name, custom_id, description, priority, priority_num, status,
+            name, custom_id, description, priority, priority_num, status, estimation_type,
             classification, scope, out_of_scope,
             selected_factors: JSON.stringify(selected_factors || []),
             journal_entries: JSON.stringify(journal_entries || []),
@@ -178,6 +178,7 @@ export default function createInitiativesRouter(db) {
         const oldDataForAudit = {
             name: oldInitiative.name, custom_id: oldInitiative.custom_id, description: oldInitiative.description, 
             priority: oldInitiative.priority, priority_num: oldInitiative.priority_num, status: oldInitiative.status,
+            estimation_type: oldInitiative.estimation_type,
             classification: oldInitiative.classification, scope: oldInitiative.scope, out_of_scope: oldInitiative.out_of_scope,
             selected_factors: oldInitiative.selected_factors || '[]',
             computed_hours: parseFloat(oldInitiative.computed_hours || 0).toFixed(1),
@@ -186,7 +187,7 @@ export default function createInitiativesRouter(db) {
             end_date: oldInitiative.end_date || null
         };
         const newDataForAudit = {
-            name, custom_id, description, priority, priority_num, status,
+            name, custom_id, description, priority, priority_num, status, estimation_type,
             classification, scope, out_of_scope,
             selected_factors: JSON.stringify(selected_factors || []),
             computed_hours: newComputedHours.toFixed(1),
