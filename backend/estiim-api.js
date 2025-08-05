@@ -927,16 +927,14 @@ export async function createApp() {
   return app;
 }
 
-if (import.meta.main) {
-  createApp()
-    .then(app => {
-      const port = process.env.PORT || 3000;
-      app.listen(port, () => {
-        console.log(`Estiim API listening on port ${port}`);
-      });
-    })
-    .catch(err => {
-      console.error('Failed to start Estiim API:', err);
-      process.exit(1);
+// Unconditional startup
+createApp()
+  .then(app => {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+      console.log(`[BOOT] Estiim API listening on http://localhost:${PORT}`);
     });
-}
+  })
+  .catch(err => {
+    console.error("[BOOT ERROR]", err);
+  });
