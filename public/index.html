@@ -1,1740 +1,239 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Estiim – T-Shirt Estimator</title>
-<!-- Removed Lucide CDN script -->
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;display=swap');
-:root { --bg:#f3f4f6; --card:#fff; --border:#e5e7eb; --primary:#2ecc71; --primary-dark:#27ae60; --text:#111827; --overlay:rgba(0,0,0,0.4); --orange:#f97316; --orange-dark:#ea580c; --red:#ef4444; --green:#22c55e; }
-* { box-sizing:border-box; font-family:Inter,Arial,sans-serif; }
-body { margin:0; background:var(--bg); color:var(--text); }
-header { background:var(--primary); color:#fff; padding:12px 24px; display:flex; justify-content:space-between; align-items:center; }
-header h1 { margin:0; font-size:22px; font-weight:600; }
-nav a { color:#fff; margin-left:16px; text-decoration:none; font-weight:500; }
-nav a:hover { opacity:.85; }
-section { display:none; padding:24px 10vw; }
-section.active { display:block; }
-.card { background:var(--card); padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,.05); margin-bottom:24px; }
-h2 { margin:0 0 12px; font-size:18px; font-weight:600; }
-button, input, select, textarea { font-size:14px; padding:8px 10px; border-radius:6px; border:1px solid var(--border); }
-button { background:var(--primary); color:#fff; border:none; cursor:pointer; }
-button:hover { background:var(--primary-dark); }
-table { width:100%; border-collapse:collapse; margin-top:12px; }
-th, td { border:1px solid var(--border); padding:8px; text-align:left; }
-th { background:#f9fafb; }
-.flex { display:flex; gap:12px; flex-wrap:wrap; }
-input[type=number] { width:90px; }
-.modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:var(--overlay); display:none; align-items:center; justify-content:center; z-index:1000; }
-.modal { background:var(--card); padding:24px; border-radius:8px; max-width:900px; /* Increased max-width for two columns */ width:90%; position:relative; box-shadow:0 4px 8px rgba(0,0,0,.1); }
-.modal h2 { margin-top:0; }
-.modal .close { position:absolute; top:12px; right:16px; background:none; border:none; font-size:18px; cursor:pointer; color:var(--text); }
-.modal pre { white-space:pre-wrap; background:#f3f4f6; padding:10px; border-radius:4px; max-height:300px; overflow-y:auto; }
-.audit-container { max-height: 400px; overflow-y: auto; }
-.audit-item { margin-bottom: 15px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; }
-.audit-item h4 { margin: 0 0 8px; font-size: 16px; }
-.diff-added { color: var(--green); }
-.diff-removed { color: var(--red); text-decoration: line-through; }
-.export-button {
-    background-color: #007bff; /* Blue color */
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
+<meta charset="UTF-8"/>
+<title>Estiim – T‑Shirt Estimator</title>
+<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+:root{
+  --bg:#f3f4f6;
+  --card-bg:#ffffff;
+  --primary:#2563eb;
+  --primary-dark:#1e40af;
+  --text:#111827;
+  --border:#e5e7eb;
 }
-.export-button:hover {
-    background-color: #0056b3; /* Darker blue on hover */
-}
-.import-button {
-    background-color: var(--orange); /* Orange color */
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-}
-.import-button:hover {
-    background-color: var(--orange-dark); /* Darker orange on hover */
-}
-footer {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    text-align: center;
-    color: #aaa;
-    padding: 5px;
-    font-size: 12px;
-}
-.factor-calc {
-    position: absolute;
-    top: 24px;
-    right: 24px;
-    font-size: 12px;
-    text-align: right;
-    line-height: 1.5;
-    background-color: #e6f7ff; /* Light blue background */
-    padding: 8px 12px;
-    border-radius: 6px;
-    display: flex; /* Make it horizontal */
-    gap: 12px;
-    align-items: center;
-}
-.factor-calc > div {
-    white-space: nowrap;
-}
-
-/* New styles for factor items and custom checkboxes */
-.factor-item {
-    display: flex;
-    align-items: center;
-    gap: 10px; /* Space between checkbox/label and quantity */
-    margin-bottom: 8px;
-    padding: 5px 0;
-}
-
-/* Custom checkbox styling */
-.custom-checkbox {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    position: relative;
-    padding-left: 25px; /* Space for the custom box */
-    user-select: none;
-    min-height: 18px; /* Ensure enough height for the label text */
-}
-
-.custom-checkbox input[type="checkbox"] {
-    position: absolute;
-    opacity: 0; /* Hide default checkbox */
-    cursor: pointer;
-    height: 0;
-    width: 0;
-}
-
-.checkmark {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 18px;
-    width: 18px;
-    background-color: #eee;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    transition: background-color 0.2s, border-color 0.2s;
-}
-
-.custom-checkbox:hover input ~ .checkmark {
-    background-color: #ccc;
-}
-
-.custom-checkbox input:checked ~ .checkmark {
-    background-color: var(--primary);
-    border-color: var(--primary);
-}
-
-.checkmark:after {
-    content: "";
-    position: absolute;
-    display: none;
-}
-
-.custom-checkbox input:checked ~ .checkmark:after {
-    display: block;
-}
-
-.custom-checkbox .checkmark:after {
-    left: 6px;
-    top: 2px;
-    width: 5px;
-    height: 10px;
-    border: solid white;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-}
-
-/* Quantity input styling for better appearance */
-.factor-item input[type="number"] {
-    flex-shrink: 0; /* Prevent shrinking */
-    width: 70px; /* Smaller width for quantity */
-    transition: all 0.3s ease-in-out; /* Smooth transition for display */
-    opacity: 1; /* Default visible */
-    pointer-events: auto; /* Default interactive */
-}
-
-.factor-item input[type="number"][style*="display: none"] {
-    opacity: 0;
-    pointer-events: none;
-    width: 0; /* Collapse width when hidden */
-    padding-left: 0;
-    padding-right: 0;
-    border: none; /* Hide border when collapsed */
-}
-
-/* Table header sortable styles */
-.sortable-th {
-    cursor: pointer;
-    position: relative;
-    padding-right: 20px; /* Space for arrow */
-}
-
-.sortable-th .sort-arrow {
-    position: absolute;
-    right: 5px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.8em;
-    color: #888;
-}
-
-/* Journal styles */
-.journal-entry {
-    padding: 8px;
-    border-bottom: 1px dashed var(--border);
-    font-size: 0.9em;
-    color: #555;
-}
-.journal-entry:last-child {
-    border-bottom: none;
-}
-.journal-entry .timestamp {
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 4px;
-    display: block;
-}
-.journal-entry.audit {
-    background-color: #f0f8ff; /* Light blue for audit entries */
-    border-left: 3px solid var(--primary);
-    padding-left: 5px;
-}
-.journal-entry.audit .audit-summary {
-    font-style: italic;
-    color: #666;
-}
-
-
-/* Modal layout for initiative */
-.modal-content-flex {
-    display: flex;
-    gap: 24px; /* Space between columns */
-    flex-wrap: wrap; /* Allows columns to wrap on smaller screens */
-}
-
-.initiative-details-left {
-    flex: 2; /* Takes more space on larger screens */
-    min-width: 300px; /* Minimum width before wrapping */
-}
-
-.initiative-journal-right {
-    flex: 1; /* Takes less space, but grows */
-    min-width: 250px; /* Minimum width before wrapping */
-    display: flex; /* Flex container for its own content */
-    flex-direction: column; /* Stack journal elements vertically */
-}
-
-/* New style for calculated shirt size */
-.calculated-shirt-size {
-    font-size: 1.2em; /* Slightly larger font */
-    font-weight: bold; /* Bold text */
-    margin-top: 16px; /* Space above */
-    margin-bottom: 8px; /* Space below */
-}
-
-/* Adjustments for smaller screens */
-@media (max-width: 768px) {
-    .modal-content-flex {
-        flex-direction: column; /* Stack columns vertically */
-    }
-    .initiative-details-left,
-    .initiative-journal-right {
-        min-width: unset; /* Remove min-width to allow full width */
-        width: 100%;
-    }
-}
-
-/* Custom Message Box Styles */
-.message-box-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: var(--overlay);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000; /* Higher than other modals */
-    display: none; /* Hidden by default */
-}
-
-.message-box {
-    background: var(--card);
-    padding: 24px;
-    border-radius: 8px;
-    max-width: 400px;
-    width: 90%;
-    box-shadow: 0 44px 8px rgba(0,0,0,.1);
-    text-align: center;
-}
-
-.message-box h3 {
-    margin-top: 0;
-    font-size: 20px;
-    color: var(--text);
-}
-
-.message-box p {
-    margin-bottom: 20px;
-    color: #555;
-}
-
-.message-box button {
-    background-color: var(--primary);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.message-box button:hover {
-    background-color: var(--primary-dark);
-}
-
-.message-box.success h3 {
-    color: var(--green);
-}
-
-.message-box.error h3 {
-    color: var(--red);
-}
-
-</style>
+*{box-sizing:border-box;font-family:Inter,Arial,Helvetica,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text)}
+header{background:var(--primary);color:#fff;padding:12px 24px;display:flex;justify-content:space-between;align-items:center}
+header h1{margin:0;font-size:22px;font-weight:600}
+nav a{color:#fff;margin-left:16px;text-decoration:none;font-weight:500;transition:opacity .2s}
+nav a:hover{opacity:.8}
+section{display:none;padding:24px 10vw}
+section.active{display:block}
+.card{background:var(--card-bg);padding:20px;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,.05);margin-bottom:24px}
+h2{margin-top:0;margin-bottom:12px;font-size:18px;font-weight:600}
+input,select,textarea,button{padding:8px 10px;font-size:14px;border:1px solid var(--border);border-radius:6px}
+textarea{resize:vertical;min-height:80px;width:100%}
+button{background:var(--primary);color:#fff;border:none;font-weight:600;cursor:pointer;transition:background .2s}
+button:hover{background:var(--primary-dark)}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{border:1px solid var(--border);padding:8px;text-align:left;font-size:14px}
+th{background:#f9fafb}
+.small{font-size:12px;color:#4b5563;white-space:pre-wrap}
+input[type=number]{width:80px}
+.flex{display:flex;gap:12px;flex-wrap:wrap}
+label{font-size:14px;margin-right:8px}</style>
 </head>
 <body>
 <header>
   <h1>Estiim</h1>
   <nav>
     <a href="#home">Initiatives</a>
+    <a href="#resources">Resource Types</a>
     <a href="#factors">Estimation Factors</a>
-    <a href="#shirt-sizes">Shirt Sizes</a>
   </nav>
 </header>
 
 <section id="home" class="active">
-  <div class="card flex" style="justify-content:space-between;align-items:center;">
-    <h2>Initiatives</h2>
+  <div class="card">
+    <h2>Create Initiative</h2>
     <div class="flex">
-        <button onclick="window.addInitiative()">+ Add Initiative</button>
-        <button class="export-button" onclick="window.exportInitiatives()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> Export
-        </button>
-        <button class="export-button" onclick="window.exportResourceView()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> Export Resource View
-        </button>
-        <button class="import-button" onclick="window.importInitiatives()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-upload"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg> Import
-        </button>
-        <input type="file" id="importFileInput" accept=".tsv" style="display: none;" onchange="window.handleImportFile(event)">
+      <input id="init-name" placeholder="Initiative name" style="flex:1"/>
+      <button onclick="saveInitiative()">Save Initiative</button>
     </div>
+    <div id="factor-picker" style="margin-top:16px"></div>
   </div>
   <div class="card">
-    <table id="init-table">
-        <thead>
-            <tr>
-                <th class="sortable-th" data-sort="id">Internal ID<span class="sort-arrow"></span></th>
-                <th class="sortable-th" data-sort="custom_id">User-Defined ID<span class="sort-arrow"></span></th>
-                <th class="sortable-th" data-sort="name">Name<span class="sort-arrow"></span></th>
-                <th class="sortable-th" data-sort="status">Status<span class="sort-arrow"></span></th>
-                <th class="sortable-th" data-sort="shirt_size">Shirt Size<span class="sort-arrow"></span></th>
-                <th class="sortable-th" data-sort="computed_hours">Estimated Hours<span class="sort-arrow"></span></th>
-                <th class="sortable-th" data-sort="start_date">Start Date<span class="sort-arrow"></span></th>
-                <th class="sortable-th" data-sort="end_date">End Date<span class="sort-arrow"></span></th>
-                <th class="sortable-th" data-sort="created_at">Created<span class="sort-arrow"></span></th>
-                <th class="sortable-th" data-sort="updated_at">Updated<span class="sort-arrow"></span></th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+    <h2>Existing Initiatives</h2>
+    <table id="init-table"><thead><tr><th>Name</th><th>Factor Count</th><th>Shirt Size</th><th>Computed Hours (JSON)</th></tr></thead><tbody></tbody></table>
+  </div>
+</section>
+
+<section id="resources">
+  <div class="card">
+    <h2>Add / Edit Resource Type</h2>
+    <input id="rt-id" type="hidden"/>
+    <div class="flex">
+      <input id="rt-name" placeholder="Name"/>
+      <button onclick="saveResourceType()">Save</button>
+      <button onclick="resetRT()" style="background:var(--border);color:var(--text)">Reset</button>
+    </div>
+    <textarea id="rt-desc" placeholder="Description"></textarea>
+  </div>
+  <div class="card">
+    <h2>All Resource Types</h2>
+    <table id="rt-table"><thead><tr><th>Name</th><th>Description</th><th></th></tr></thead><tbody></tbody></table>
   </div>
 </section>
 
 <section id="factors">
   <div class="card">
-    <div class="flex" style="justify-content:space-between;align-items:center;">
-        <h2>Resource Types</h2>
-        <button onclick="window.openModal('rt')">+ Add Resource Type</button>
-    </div>
-    <div class="card">
-        <table id="rt-table"><thead><tr><th>Name</th><th>Description</th><th></th></tr></thead><tbody></tbody></table>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top: 24px;">
-    <div class="flex" style="justify-content:space-between;align-items:center;">
-        <h2>Estimation Factors</h2>
-        <button onclick="window.addEstimationFactor()">+ Add Estimation Factor</button>
-    </div>
-    <div class="card">
-        <table id="ef-table"><thead><tr><th>Name</th><th>Resources</th><th>Days</th><th>Hours</th><th></th></tr></thead><tbody></tbody></table>
-    </div>
-  </div>
-</section>
-
-<section id="shirt-sizes">
-    <div class="card flex" style="justify-content:space-between;align-items:center;">
-        <h2>Shirt Size Configuration</h2>
-        <div><button onclick="window.saveShirtSizes()">Save</button><button onclick="window.loadShirtSizes()" style="background:var(--border);color:var(--text)">Cancel</button><button onclick="window.showShirtSizeAuditTrail()" style="margin-left:8px;">🔍 Audit</button></div>
-    </div>
-    <div class="card">
-        <p>Set the minimum estimated hours for each T-shirt size.</p>
-        <table id="shirt-size-table"><thead><tr><th>Size</th><th>Hours</th><th>Days</th><th>Months</th></tr></thead><tbody></tbody></table>
-    </div>
-</section>
-
-<!-- Modals -->
-<div id="modal-init" class="modal-overlay"><div class="modal">
-    <button class="close" onclick="window.closeModal('init')">×</button>
-    <h2>Add / Edit Initiative</h2>
-    <input id="init-id" type="hidden">
-    
-    <div class="modal-content-flex">
-        <div class="initiative-details-left">
-            <div class="flex"><input id="init-name" placeholder="Name" style="flex:1"><input id="init-custom-id" placeholder="User-Defined ID" style="flex:1"></div>
-            <textarea id="init-desc" placeholder="Description" style="width:100%;margin-top:12px"></textarea>
-            <div class="flex" style="margin-top:12px"><div><label>Priority</label><br><select id="init-priority"><option>Low</option><option>Medium</option><option>High</option></select></div><div><label>Pri #</label><br><input id="init-priority-num" type="number" min="1" max="10"></div><div><label>Status</label><br><select id="init-status"><option>To Do</option><option>Draft</option><option>Proposal</option><option>Re-Estimation</option><option>Accepted</option><option>Rejected</option></select></div></div>
-            <div class="flex" style="margin-top:12px"><div><label>Start Date</label><br><input id="init-start-date" type="date"></div><div><label>End Date</label><br><input id="init-end-date" type="date"></div></div>
-            <textarea id="init-scope" placeholder="In Scope" style="width:100%;margin-top:12px"></textarea>
-            <textarea id="init-out" placeholder="Out of Scope" style="width:100%;margin-top:12px"></textarea>
-            
-            <!-- Calculated T-Shirt Size moved here -->
-            <div class="calculated-shirt-size" id="init-calculated-shirt-size"></div>
-
-            <div style="margin-top:16px">
-                <h3>T-Shirt Factors</h3>
-                <div id="selected-factors-summary"></div>
-                <button style="margin-top:8px;" onclick="window.openFactorModal()">Select Factors</button>
-            </div>
-        </div>
-
-        <!-- Journal Section -->
-        <div class="initiative-journal-right">
-            <div class="flex" style="margin-bottom:12px;">
-                <div style="flex:1;"><label><b>Created</b></label><br><span id="init-created"></span></div>
-                <div style="flex:1;"><label><b>Updated</b></label><br><span id="init-updated"></span></div>
-            </div>
-            <h3>Journal</h3>
-            <div id="initiative-journal-log" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border); padding: 10px; border-radius: 6px; background: #f9fafb; flex-grow: 1;"></div>
-            <textarea id="journal-comment-input" placeholder="Add a new comment..." style="width:100%; margin-top:10px; min-height: 60px;"></textarea>
-            <button onclick="window.addJournalComment()" style="margin-top:8px;">Add Comment</button>
-        </div>
-    </div>
-
-    <div class="flex" style="justify-content:flex-end;margin-top:16px"><button onclick="window.saveInitiative()">Save</button><button onclick="window.closeModal('init')" style="background:var(--border);color:var(--text)">Cancel</button></div>
-</div></div>
-
-<div id="modal-rt" class="modal-overlay"><div class="modal">
-    <button class="close" onclick="window.closeModal('rt')">×</button>
-    <h2>Add / Edit Resource Type</h2>
-    <input id="rt-id" type="hidden">
-    <input id="rt-name" placeholder="Name" style="width:100%;margin-top:12px">
-    <textarea id="rt-desc" placeholder="Description" style="width:100%;margin-top:12px"></textarea>
-    <div style="text-align:right;margin-top:16px"><button onclick="window.saveResourceType()">Save</button><button onclick="window.closeModal('rt')" style="background:var(--border);color:var(--text)">Cancel</button></div>
-</div></div>
-
-<div id="modal-ef" class="modal-overlay"><div class="modal">
-    <button class="close" onclick="window.closeModal('ef')">×</button>
     <h2>Add / Edit Estimation Factor</h2>
-    <input id="ef-id" type="hidden">
-    <input id="ef-name" placeholder="Name" style="width:100%;margin-top:12px">
-    <div id="ef-hours" style="margin-top:12px"></div>
-    <div style="text-align:right;margin-top:16px"><button onclick="window.saveEstimationFactor()">Save</button><button onclick="window.closeModal('ef')" style="background:var(--border);color:var(--text)">Cancel</button></div>
-</div></div>
-
-<div id="modal-factors" class="modal-overlay"><div class="modal">
-    <button class="close" onclick="window.closeModal('factors')">×</button>
-    <div class="factor-calc">
-      <div id="factor-hours">0h</div>
-      <div id="factor-days">0d</div>
-      <div id="factor-months">0m</div>
-      <div id="factor-size">Size: XS</div>
+    <input id="ef-id" type="hidden"/>
+    <div class="flex">
+      <input id="ef-name" placeholder="Factor name" style="flex:1"/>
+      <select id="ef-unit"><option value="h">Hours</option><option value="d">Days</option></select>
+      <button onclick="saveEstimationFactor()">Save</button>
+      <button onclick="resetEF()" style="background:var(--border);color:var(--text)">Reset</button>
     </div>
-    <h2 style="padding-right: 120px;">T-Shirt Factors</h2>
-    <div id="factor-picker"></div>
-    <div style="text-align:right;margin-top:16px"><button onclick="window.saveFactors()">Save</button><button onclick="window.closeModal('factors')" style="background:var(--border);color:var(--text)">Cancel</button></div>
-</div></div>
-
-<div id="modal-audit" class="modal-overlay"><div class="modal">
-    <button class="close" onclick="window.closeModal('audit')">×</button>
-    <h2 id="audit-title">Audit Trail</h2>
-    <div id="audit-content" class="audit-container"></div>
-</div></div>
-
-<div id="modal-shirt-size-audit" class="modal-overlay"><div class="modal">
-    <button class="close" onclick="window.closeModal('shirt-size-audit')">×</button>
-    <h2 id="shirt-size-audit-title">Shirt Size Audit Trail</h2>
-    <div id="shirt-size-audit-content" class="audit-container"></div>
-</div></div>
-
-<!-- Custom Message Box Modal -->
-<div id="messageBoxModal" class="message-box-overlay">
-    <div class="message-box">
-        <h3 id="messageBoxTitle"></h3>
-        <p id="messageBoxContent"></p>
-        <button onclick="window.hideMessage()">OK</button>
-    </div>
-</div>
-
-<footer>
-    Build R20250804161100
-</footer>
+    <div id="ef-hours" style="margin-top:16px"></div>
+  </div>
+  <div class="card">
+    <h2>All Estimation Factors</h2>
+    <table id="ef-table"><thead><tr><th>Name</th><th>Unit</th><th></th></tr></thead><tbody></tbody></table>
+  </div>
+</section>
 
 <script>
-const API = '';
-window.selectedFactors = [];
-window.efList = [];
-window.rtList = [];
-window.shirtSizes = [];
-window.currentInitiativeJournal = []; // Global variable to hold journal entries for the current initiative
+const API='';
 
-// Global state for initiatives sorting
-let currentSortColumn = 'created_at';
-let currentSortDirection = 'desc';
-
-// Helper function to format date/time in EST
-function formatDateInEST(isoString, includeTime = true) {
-    if (!isoString) return '';
-    const date = new Date(isoString);
-    const options = {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        timeZone: 'America/New_York'
-    };
-    let datePart = date.toLocaleString('en-US', options); // e.g., "08/04/2025"
-
-    if (includeTime) {
-        const timeOptions = {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true,
-            timeZone: 'America/New_York'
-        };
-        let timePart = date.toLocaleString('en-US', timeOptions); // e.g., "05:47:00 PM"
-        // Remove the comma if it appears after the date part in some locales
-        return `${datePart.replace(/,/g, '')} ${timePart.replace(/,/g, '')}`;
-    }
-    return datePart.replace(/,/g, '');
+function showSection(hash){
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+  const id=(hash||'#home').replace('#','');
+  document.getElementById(id).classList.add('active');
+  if(id==='resources'){loadResourceTypes();}
+  if(id==='factors'){loadResourceTypes().then(loadEstimationFactors);}
+  if(id==='home'){Promise.all([loadFactorPicker(),loadInitiatives()]);}
 }
+window.addEventListener('hashchange',()=>showSection(location.hash));
+showSection(location.hash);
 
-// Custom Message Box Functions
-function showMessage(title, message, type = 'info') {
-    const modal = document.getElementById('messageBoxModal');
-    const titleElement = document.getElementById('messageBoxTitle');
-    const contentElement = document.getElementById('messageBoxContent');
-    const messageBox = modal.querySelector('.message-box');
-
-    titleElement.textContent = title;
-    contentElement.textContent = message;
-
-    // Remove previous type classes and add the new one
-    messageBox.classList.remove('success', 'error');
-    if (type === 'success') {
-        messageBox.classList.add('success');
-    } else if (type === 'error') {
-        messageBox.classList.add('error');
-    }
-
-    modal.style.display = 'flex';
-}
-
-function hideMessage() {
-    document.getElementById('messageBoxModal').style.display = 'none';
-}
-
-
-// Define functions at the global scope
-function renderSelectedFactorsSummary() {
-    const summary = document.getElementById('selected-factors-summary');
-    if (summary) {
-        if (window.selectedFactors && window.selectedFactors.length > 0) {
-            summary.innerHTML = `<p>${window.selectedFactors.length} factor(s) selected.</p>`;
-        } else {
-            summary.innerHTML = `<p>No factors selected.</p>`;
-        }
-    } else {
-        console.warn("Element 'selected-factors-summary' not found.");
-    }
-}
-
-function openModal(type) {
-  document.getElementById('modal-' + type).style.display = 'flex';
-}
-function closeModal(type) {
-  document.getElementById('modal-' + type).style.display = 'none';
-}
-
-function show(hash) {
-  document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
-  const id = (hash || '#home').slice(1);
-  const sec = document.getElementById(id);
-  if (sec) sec.classList.add('active');
-  if (id === 'home') loadInitiatives(currentSortColumn, currentSortDirection); // Pass sort state
-  if (id === 'factors') {
-    loadRT().then(loadEF);
-  }
-  if (id === 'shirt-sizes') loadShirtSizes();
-}
-window.addEventListener('hashchange', () => show(location.hash));
-// handle same-hash clicks
-document.querySelectorAll('nav a').forEach(link => {
-  link.addEventListener('click', e => {
-    e.preventDefault();
-    const hash = link.getAttribute('href');
-    show(hash);
-    history.pushState(null, '', hash);
-  });
-});
-// initial render
-show(location.hash);
-
-// Resource Types CRUD
-async function loadRT() {
-  const res = await fetch(API + '/api/resource-types');
-  const list = await res.json();
-  window.rtList = list;
-  const tbody = document.querySelector('#rt-table tbody'); tbody.innerHTML = '';
-  list.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.name}</td><td>${r.description||''}</td><td><button onclick="window.editRT('${r.id}')">Edit</button><button onclick=\"window.delRT('${r.id}')\" style=\"background:var(--red)\">Del</button></td>`;
-    tbody.appendChild(tr);
-  });
-}
-function editRT(id) {
-  const rt = window.rtList.find(x => x.id === id);
-  document.getElementById('rt-id').value = rt.id;
-  document.getElementById('rt-name').value = rt.name;
-  document.getElementById('rt-desc').value = rt.description || '';
-  openModal('rt');
-}
-async function delRT(id) {
-  showMessage('Confirm Delete', 'Are you sure you want to delete this resource type?', 'confirm');
-  // Using a custom confirm, need to modify this to be non-blocking or use a promise
-  // For now, keeping the original confirm behavior for simplicity, but noting it needs refactor.
-  if (!confirm('Delete?')) return; 
-  await fetch(API + `/api/resource-types/${id}`, { method: 'DELETE' });
-  loadRT();
-}
-async function saveResourceType() {
-  const id = document.getElementById('rt-id').value.trim();
-  const name = document.getElementById('rt-name').value.trim();
-  if (!name) { showMessage('Error', 'Name required', 'error'); return; }
-  const desc = document.getElementById('rt-desc').value;
-  const url = id ? `/api/resource-types/${id}` : '/api/resource-types';
-  const method = id ? 'PUT' : 'POST';
-  const res = await fetch(API + url, {
-    method, headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ name, description: desc })
-  });
-  if (!res.ok) { showMessage('Error', 'Error: ' + res.status, 'error'); return; }
-  closeModal('rt'); loadRT();
-}
-
-// Estimation Factors CRUD
-function renderEFGrid() {
-  const cont = document.getElementById('ef-hours'); cont.innerHTML = '';
-  (window.rtList||[]).forEach(rt => {
-    const row = document.createElement('div'); row.className = 'flex';
-    row.innerHTML = `<label style=\"width:120px\">${rt.name}</label><input type=\"number\" min=\"0\" id=\"ef-h-${rt.id}\"><select id=\"ef-u-${rt.id}\"><option value=\"h\">h</option><option value=\"d\">d</option></select>`;
-    cont.appendChild(row);
-  });
-}
-async function loadEF() {
-  renderEFGrid();
-  const res = await fetch(API + '/api/estimation-factors'); const list = await res.json(); window.efList = list;
-  const tbody = document.querySelector('#ef-table tbody'); tbody.innerHTML = '';
-  list.forEach(f => {
-    const hrs = f.hoursPerResourceType || {};
-    const names = Object.entries(hrs).filter(([,v])=>v>0).map(([id])=>{ const r=window.rtList.find(x=>x.id===id); return r?r.name:id; }).join(',');
-    const total = Object.values(hrs).reduce((a,b)=>a+b,0), days = (total/8).toFixed(1);
+/* Resource Types */
+async function loadResourceTypes(){
+  const res=await fetch(API+'/api/resource-types');window._rtList=await res.json();
+  const tbody=document.querySelector('#rt-table tbody');tbody.innerHTML='';
+  _rtList.forEach(rt=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${f.name}</td><td>${names}</td><td>${days}</td><td>${total}</td><td><button onclick=\"window.editEF('${f.id}')\">Edit</button><button onclick=\"window.delEF('${f.id}')\" style=\"background:var(--red)\">Del</button></td>`;
+    tr.innerHTML=`<td>${rt.name}</td><td>${rt.description||''}</td>
+      <td><button onclick="editRT('${rt.id}')">Edit</button>
+      <button onclick="deleteRT('${rt.id}')" style="background:#ef4444">Del</button></td>`;
+    tbody.appendChild(tr);
+  });
+  renderEFHoursInputs();
+}
+async function saveResourceType(){
+  const id=document.getElementById('rt-id').value.trim();
+  const payload={name:document.getElementById('rt-name').value.trim(),description:document.getElementById('rt-desc').value};
+  if(!payload.name){alert('Name required');return;}
+  const url=id?('/api/resource-types/'+id):'/api/resource-types';
+  const method=id?'PUT':'POST';
+  await fetch(API+url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  resetRT();loadResourceTypes();
+}
+function editRT(id){
+  const rt=_rtList.find(r=>r.id===id);
+  document.getElementById('rt-id').value=rt.id;
+  document.getElementById('rt-name').value=rt.name;
+  document.getElementById('rt-desc').value=rt.description||'';
+}
+async function deleteRT(id){if(confirm('Delete?')){await fetch(API+'/api/resource-types/'+id,{method:'DELETE'});loadResourceTypes();}}
+function resetRT(){document.getElementById('rt-id').value='';document.getElementById('rt-name').value='';document.getElementById('rt-desc').value='';}
+
+/* Estimation Factors */
+async function loadEstimationFactors(){
+  const res=await fetch(API+'/api/estimation-factors');window._efList=await res.json();
+  const tbody=document.querySelector('#ef-table tbody');tbody.innerHTML='';
+  _efList.forEach(f=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${f.name}</td><td>${f.input_unit}</td>
+      <td><button onclick="editEF('${f.id}')">Edit</button>
+      <button onclick="deleteEF('${f.id}')" style="background:#ef4444">Del</button></td>`;
     tbody.appendChild(tr);
   });
 }
-async function addEstimationFactor() { // Made async to await loadRT()
-  await loadRT(); // Ensure resource types are loaded before rendering the grid
-  document.getElementById('ef-id').value = ''; // Clear ID for new entry
-  document.getElementById('ef-name').value = '';
-  // Clear all resource hour inputs
-  (window.rtList||[]).forEach(rt => {
-      const inp = document.getElementById(`ef-h-${rt.id}`);
-      if (inp) inp.value = '';
-      const sel = document.getElementById(`ef-u-${rt.id}`);
-      if (sel) sel.value = 'h'; // Reset to hours
+function renderEFHoursInputs(){
+  const container=document.getElementById('ef-hours');if(!container) return;
+  container.innerHTML='';
+  (_rtList||[]).forEach(rt=>{
+    const wrap=document.createElement('div');wrap.className='flex';
+    wrap.innerHTML=`<label style="width:120px">${rt.name}</label><input type="number" min="0" id="ef-h-${rt.id}" />`;
+    container.appendChild(wrap);
   });
-  renderEFGrid(); // Re-render the grid after ensuring rtList is populated
-  openModal('ef');
 }
-function editEF(id) {
-  const f = window.efList.find(x=>x.id===id);
-  document.getElementById('ef-id').value=id; document.getElementById('ef-name').value=f.name;
-  renderEFGrid(); let hrs=f.hoursPerResourceType||{};
-  Object.entries(hrs).forEach(([rtId,val])=>{
-    const inp=document.getElementById(`ef-h-${rtId}`), sel=document.getElementById(`ef-u-${rtId}`);
-    if(inp){ if(val%8===0){inp.value=val/8; sel.value='d';} else{inp.value=val; sel.value='h';} }
-  }); openModal('ef');
+function resetEF(){
+  document.getElementById('ef-id').value='';
+  document.getElementById('ef-name').value='';
+  document.getElementById('ef-unit').value='h';
+  renderEFHoursInputs();
 }
-async function delEF(id) { 
-  showMessage('Confirm Delete', 'Are you sure you want to delete this estimation factor?', 'confirm');
-  // For now, keeping the original confirm behavior for simplicity, but noting it needs refactor.
-  if(!confirm('Delete?')) return; 
-  await fetch(API+`/api/estimation-factors/${id}`,{method:'DELETE'}); loadEF(); 
+async function saveEstimationFactor(){
+  const id=document.getElementById('ef-id').value.trim();
+  const name=document.getElementById('ef-name').value.trim();
+  if(!name){alert('Name required');return;}
+  const unit=document.getElementById('ef-unit').value;
+  const hours={};
+  (_rtList||[]).forEach(rt=>{
+    const val=+document.getElementById('ef-h-'+rt.id).value;
+    if(val>0) hours[rt.id]=val;
+  });
+  const payload={name,inputUnit:unit,hoursPerResourceType:hours};
+  const url=id?('/api/estimation-factors/'+id):'/api/estimation-factors';
+  const method=id?'PUT':'POST';
+  await fetch(API+url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  resetEF();loadEstimationFactors();
 }
-async function saveEstimationFactor() {
-  const id=document.getElementById('ef-id').value.trim(), name=document.getElementById('ef-name').value.trim(); if(!name){showMessage('Error', 'Name required', 'error');return;}
-  const hours={}; (window.rtList||[]).forEach(rt=>{ const inp=document.getElementById(`ef-h-${rt.id}`), sel=document.getElementById(`ef-u-${rt.id}`); if(!inp)return;let val=+inp.value; if(val<=0)return; if(sel.value==='d') val*=8; hours[rt.id]=val; });
-  const url=id?`/api/estimation-factors/${id}`:'/api/estimation-factors', method=id?'PUT':'POST';
-  const res=await fetch(API+url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify({name,hoursPerResourceType:hours})});
-  if(!res.ok){showMessage('Error', 'Error:'+res.status, 'error');return;} closeModal('ef'); loadEF();
+function editEF(id){
+  const f=_efList.find(e=>e.id===id);
+  document.getElementById('ef-id').value=f.id;
+  document.getElementById('ef-name').value=f.name;
+  document.getElementById('ef-unit').value=f.input_unit;
+  renderEFHoursInputs();
+  let hrsData = f.hours_per_resource_type || f.hoursPerResourceType || {};
+  if (typeof hrsData === 'string') {
+    try { hrsData = JSON.parse(hrsData); } catch(e) { hrsData = {}; }
+  }
+  Object.entries(hrsData).forEach(([rtId,val])=>{
+    const inp=document.getElementById('ef-h-'+rtId);if(inp) inp.value=val;
+  });
 }
+async function deleteEF(id){if(confirm('Delete?')){await fetch(API+'/api/estimation-factors/'+id,{method:'DELETE'});loadEstimationFactors();}}
 
-// Factors Modal and T-Shirt Sizing
+/* Initiatives */
 async function loadFactorPicker(){
-  const area=document.getElementById('factor-picker'); area.innerHTML='';
-  // Sort window.efList by name before rendering
-  const sortedEfList = [...window.efList].sort((a, b) => a.name.localeCompare(b.name));
-
-  sortedEfList.forEach(f=>{
-    const row=document.createElement('div');
-    row.className='factor-item'; // Apply new class for alignment
-
-    const selected = window.selectedFactors.find(sf => sf.factorId === f.id);
-    const checked = selected ? 'checked' : '';
-    const qty = selected ? selected.quantity : '1';
-    const qtyDisplay = selected ? 'inline-block' : 'none'; // Initial display state
-
-    // Use a custom checkbox structure
-    row.innerHTML = `
-        <label class="custom-checkbox">
-            <input type="checkbox" data-id="${f.id}" onchange="window.toggleQty('${f.id}'); window.updateFactorCalculations()" ${checked}>
-            <span class="checkmark"></span>
-            ${f.name}
-        </label>
-        <input type="number" id="qty-${f.id}" value="${qty}" min="1" oninput="window.updateFactorCalculations()" style="display:${qtyDisplay}">
-    `;
+  const res=await fetch(API+'/api/estimation-factors');window._fpList=await res.json();
+  const area=document.getElementById('factor-picker');area.innerHTML='';
+  _fpList.forEach(f=>{
+    const row=document.createElement('div');row.className='flex';
+    row.innerHTML=`<label><input type='checkbox' id='chk-${f.id}' onchange='toggleQty("${f.id}")'/> ${f.name}</label>
+      <input type='number' id='qty-${f.id}' value='1' min='1' style='display:none'/>`;
     area.appendChild(row);
   });
-  updateFactorCalculations();
-  // Ensure initial state of quantity inputs is correctly set for transition
-  sortedEfList.forEach(f => { // Iterate over sorted list
-      toggleQty(f.id); // Call toggleQty for each to set initial display/opacity
+}
+function toggleQty(id){document.getElementById('qty-'+id).style.display=document.getElementById('chk-'+id).checked?'inline-block':'none';}
+async function saveInitiative(){
+  const name=document.getElementById('init-name').value.trim();
+  if(!name){alert('Name required');return;}
+  const selected=[];
+  (_fpList||[]).forEach(f=>{
+    if(document.getElementById('chk-'+f.id).checked){
+      const qty=+document.getElementById('qty-'+f.id).value||1;
+      selected.push({factorId:f.id,quantity:qty});
+    }
   });
+  await fetch(API+'/api/initiatives',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,selectedFactors:selected})});
+  document.getElementById('init-name').value='';
+  loadFactorPicker();loadInitiatives();
 }
-function toggleQty(id){
-    const cb = document.querySelector(`#factor-picker input[data-id='${id}']`);
-    const qtyInput = document.getElementById(`qty-${id}`);
-    if (cb && qtyInput) {
-        if (cb.checked) {
-            qtyInput.style.display = 'inline-block';
-            qtyInput.style.opacity = '1';
-            qtyInput.style.width = '70px'; // Restore width
-            qtyInput.style.paddingLeft = '8px'; // Restore padding
-            qtyInput.style.paddingRight = '10px';
-            qtyInput.style.border = '1px solid var(--border)'; // Restore border
-        } else {
-            qtyInput.style.opacity = '0';
-            qtyInput.style.width = '0'; // Collapse width
-            qtyInput.style.paddingLeft = '0';
-            qtyInput.style.right = '0';
-            qtyInput.style.border = 'none'; // Hide border
-            // Use a timeout to set display: none after transition completes
-            setTimeout(() => {
-                qtyInput.style.display = 'none';
-            }, 300); // Match CSS transition duration
-        }
-    }
-}
-async function openFactorModal() {
-    await loadRT();
-    await loadEF();
-    await loadShirtSizes(); // Load shirt sizes as well
-    loadFactorPicker();
-    openModal('factors');
-}
-function saveFactors() {
-    const newSelectedFactors = [];
-    (window.efList||[]).forEach(f => {
-        const cb = document.querySelector(`#factor-picker input[data-id='${f.id}']`);
-        if (cb && cb.checked) {
-            const qty = +document.getElementById(`qty-${f.id}`).value || 1;
-            newSelectedFactors.push({ 
-                factorId: f.id, 
-                quantity: qty,
-                name: f.name,
-                hoursPerResourceType: f.hoursPerResourceType
-            });
-        }
-    });
-    window.selectedFactors = newSelectedFactors;
-    renderSelectedFactorsSummary();
-
-    // Recalculate total hours and shirt size for display in the main initiative modal
-    let totalHoursForDisplay = 0;
-    window.selectedFactors.forEach(f => {
-        const totalFactorHours = Object.values(f.hoursPerResourceType || {}).reduce((sum, h) => sum + h, 0);
-        totalHoursForDisplay += totalFactorHours * (f.quantity || 1);
-    });
-    const shirtSizeForDisplay = getShirtSizeFromHours(totalHoursForDisplay);
-
-    // Update the displayed shirt size and hours in the main initiative modal
-    document.getElementById('init-calculated-shirt-size').textContent = `Calculated T-Shirt Size: ${shirtSizeForDisplay} (${totalHoursForDisplay}h)`;
-
-    // Close the factors modal
-    closeModal('factors');
-}
-function getShirtSizeFromHours(hours) {
-    let size = 'XS';
-    // Sort shirt sizes by threshold_hours in ascending order to find the correct size
-    const sortedSizes = [...window.shirtSizes].sort((a, b) => a.threshold_hours - b.threshold_hours);
-    for (const s of sortedSizes) {
-        if (hours >= s.threshold_hours) {
-            size = s.size;
-        } else {
-            // If current hours are less than the threshold, the previous size was the correct one.
-            // This break ensures we pick the smallest size that fits the hours.
-            break; 
-        }
-    }
-    return size;
-}
-function updateFactorCalculations() {
-    let totalHours = 0;
-    (window.efList||[]).forEach(f => {
-        const cb = document.querySelector(`#factor-picker input[data-id='${f.id}']`);
-        if (cb && cb.checked) {
-            const qty = +document.getElementById(`qty-${f.id}`).value || 0;
-            const totalFactorHours = Object.values(f.hoursPerResourceType || {}).reduce((sum, h) => sum + h, 0);
-            totalHours += totalFactorHours * qty;
-        }
-    });
-    // Assuming 8 hours per day, 160 hours per person month
-    const hoursPerDay = 8;
-    const hoursPerMonth = 160; 
-
-    const totalDays = (totalHours / hoursPerDay).toFixed(1);
-    const totalMonths = (totalHours / hoursPerMonth).toFixed(1);
-    const shirtSize = getShirtSizeFromHours(totalHours);
-
-    document.getElementById('factor-hours').textContent = `${totalHours}h`;
-    document.getElementById('factor-days').textContent = `${totalDays}d`;
-    document.getElementById('factor-months').textContent = `${totalMonths}m`;
-    document.getElementById('factor-size').textContent = `Size: ${shirtSize}`;
-}
-
-// Journal functions
-function renderJournalLog() {
-    const journalLogDiv = document.getElementById('initiative-journal-log');
-    journalLogDiv.innerHTML = ''; // Clear existing entries
-    if (window.currentInitiativeJournal && window.currentInitiativeJournal.length > 0) {
-        // Sort entries by timestamp in ASCENDING order (oldest first)
-        const sortedJournal = [...window.currentInitiativeJournal].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-        sortedJournal.forEach(entry => {
-            const entryDiv = document.createElement('div');
-            entryDiv.className = 'journal-entry';
-            const formattedDate = formatDateInEST(entry.timestamp); // Use helper for journal
-
-            if (entry.type === 'audit') {
-                entryDiv.classList.add('audit');
-                let details = '';
-                if (entry.action === 'created') {
-                    const newData = entry.new_data;
-                    details = `Created with estimated hours: ${newData.computed_hours} and size: ${newData.shirt_size}.`;
-                } else if (entry.action === 'updated') {
-                    const oldData = entry.old_data;
-                    const newData = entry.new_data;
-                    
-                    let oldFactors = [];
-                    try {
-                        oldFactors = JSON.parse(oldData.selected_factors || '[]');
-                    } catch (e) {
-                        console.error("Error parsing oldData.selected_factors in renderJournalLog:", e, oldData.selected_factors);
-                    }
-                    
-                    let newFactors = [];
-                    try {
-                        newFactors = JSON.parse(newData.selected_factors || '[]');
-                    } catch (e) {
-                        console.error("Error parsing newData.selected_factors in renderJournalLog:", e, newData.selected_factors);
-                    }
-
-                    const diffs = [];
-                    const keysToCompare = [
-                        'name', 'custom_id', 'description', 'priority', 'priority_num',
-                        'status', 'classification', 'scope', 'out_of_scope',
-                        'computed_hours', 'shirt_size', 'start_date', 'end_date'
-                    ];
-
-                    for (const key of keysToCompare) {
-                        const oldValue = oldData[key];
-                        const newValue = newData[key];
-                        
-                        // Special handling for date fields to compare only YYYY-MM-DD part
-                        if (key === 'start_date' || key === 'end_date') {
-                            const oldDate = (oldValue || '').substring(0, 10);
-                            const newDate = (newValue || '').substring(0, 10);
-                            if (oldDate !== newDate) {
-                                diffs.push(`- Changed ${key} from <span class="diff-removed">${oldDate}</span> to <span class="diff-added">${newDate}</span>`);
-                            }
-                        } else {
-                            if (oldValue !== newValue) {
-                                diffs.push(`- Changed ${key} from <span class="diff-removed">${oldValue}</span> to <span class="diff-added">${newValue}</span>`);
-                            }
-                        }
-                    }
-
-                    // Compare selected_factors separately
-                    // Sort factors before stringifying for consistent comparison
-                    const oldFactorsStr = JSON.stringify([...oldFactors].sort((a,b) => a.factorId.localeCompare(b.factorId)));
-                    const newFactorsStr = JSON.stringify([...newFactors].sort((a,b) => a.factorId.localeCompare(b.factorId)));
-
-                    if (oldFactorsStr !== newFactorsStr) {
-                        // Detailed factor changes
-                        newFactors.forEach(newFactor => {
-                            const oldFactor = oldFactors.find(of => of.factorId === newFactor.factorId);
-                            if (!oldFactor) {
-                                diffs.push(`- <span class="diff-added">Added factor: ${newFactor.name} (Qty: ${newFactor.quantity})</span>`);
-                            } else if (oldFactor.quantity !== newFactor.quantity) {
-                                diffs.push(`- Changed quantity for factor ${newFactor.name} from <span class="diff-removed">${oldFactor.quantity}</span> to <span class="diff-added">${newFactor.quantity}</span>.`);
-                            }
-                        });
-
-                        oldFactors.forEach(oldFactor => {
-                            const newFactor = newFactors.find(nf => nf.factorId === oldFactor.factorId);
-                            if (!newFactor) {
-                                diffs.push(`- <span class="diff-removed">Removed factor: ${oldFactor.name} (Qty: ${oldFactor.quantity})</span>`);
-                            }
-                        });
-                    }
-                    details = diffs.length > 0 ? diffs.join('<br>') : 'No changes to tracked fields.';
-                }
-                entryDiv.innerHTML = `<span class="timestamp">${formattedDate}</span><h4>${entry.action.charAt(0).toUpperCase() + entry.action.slice(1)}</h4><p>${details}</p>`;
-            } else { // type === 'comment'
-                entryDiv.innerHTML = `<span class="timestamp">${formattedDate}</span>${entry.text}`;
-            }
-            journalLogDiv.appendChild(entryDiv);
-        });
-        // Scroll to the bottom to show the latest entry, with a slight delay
-        setTimeout(() => {
-            journalLogDiv.scrollTop = journalLogDiv.scrollHeight;
-        }, 50); // Small delay to ensure rendering is complete
-    } else {
-        journalLogDiv.innerHTML = '<p style="text-align: center; color: #888;">No journal entries yet.</p>';
-    }
-}
-
-async function saveJournalEntryToBackend(initiativeId, journalEntries) {
-    if (!initiativeId) {
-        console.warn("Cannot save journal entry: Initiative ID is missing. Please save the initiative first.");
-        return;
-    }
-    
-    try {
-        // Fetch the current initiative to get all its fields
-        const res = await fetch(API + `/api/initiatives/${initiativeId}`);
-        if (!res.ok) { throw new Error('Failed to fetch initiative for journal update.'); }
-        const currentInitiative = await res.json();
-
-        // Update only the journal_entries and updated_at fields
-        currentInitiative.journal_entries = journalEntries;
-        currentInitiative.updated_at = new Date().toISOString(); // Update timestamp
-
-        // Send the full updated object back to the backend
-        const updateRes = await fetch(API + `/api/initiatives/${initiativeId}`, {
-            method: 'PUT',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify(currentInitiative)
-        });
-
-        if (!updateRes.ok) {
-            console.error('Error saving journal entry:', updateRes.status, await updateRes.text());
-        } else {
-            console.log('Journal entry saved to backend successfully.');
-            // Reload initiatives to reflect updated_at and potentially other changes
-            loadInitiatives(currentSortColumn, currentSortDirection);
-        }
-    } catch (error) {
-        console.error('Error in saveJournalEntryToBackend:', error);
-    }
-}
-
-function addJournalComment() {
-    const commentInput = document.getElementById('journal-comment-input');
-    const commentText = commentInput.value.trim();
-    const initiativeId = document.getElementById('init-id').value; // Get current initiative ID
-
-    if (!commentText) {
-        // Do nothing if comment is empty
-        return;
-    }
-
-    if (!initiativeId) {
-        showMessage('Error', "Please save the initiative first before adding journal comments.", 'error');
-        return;
-    }
-
-    const newEntry = {
-        timestamp: new Date().toISOString(),
-        type: 'comment', // Explicitly mark as a comment
-        text: commentText
-    };
-    window.currentInitiativeJournal.push(newEntry);
-    renderJournalLog(); // Re-render to show the new comment
-    commentInput.value = ''; // Clear the input field
-
-    // Trigger an asynchronous save to the backend
-    saveJournalEntryToBackend(initiativeId, window.currentInitiativeJournal);
-}
-
-
-// Initiatives CRUD
-async function loadInitiatives(sortBy = 'created_at', sortDirection = 'desc') {
-  const res = await fetch(API + '/api/initiatives');
-  let list = await res.json();
-
-  // Sort the list based on sortBy and sortDirection
-  list.sort((a, b) => {
-    let valA = a[sortBy];
-    let valB = b[sortBy];
-
-    // Handle numeric sorting
-    if (sortBy === 'id' || sortBy === 'computed_hours' || sortBy === 'priority_num') {
-        valA = parseFloat(valA);
-        valB = parseFloat(valB);
-    } 
-    // Handle date sorting (ISO strings can be compared directly)
-    else if (sortBy.includes('_date') || sortBy.includes('_at')) {
-        valA = valA ? new Date(valA).getTime() : 0; // Treat null/empty dates as 0 for sorting
-        valB = valB ? new Date(valB).getTime() : 0;
-    }
-    // Default to string comparison for others
-    else {
-        valA = String(valA || '').toLowerCase();
-        valB = String(valB || '').toLowerCase();
-    }
-
-    if (valA < valB) {
-      return sortDirection === 'asc' ? -1 : 1;
-    }
-    if (valA > valB) {
-      return sortDirection === 'asc' ? 1 : -1;
-    }
-    return 0;
-  });
-
-  window.initList = list;
-  const tbody = document.querySelector('#init-table tbody');
-  tbody.innerHTML = '';
-  list.forEach(i => {
-    const createdDate = formatDateInEST(i.created_at, true); // Format in EST with time
-    const updatedDate = formatDateInEST(i.updated_at, true); // Format in EST with time
-    const startDate = formatDateInEST(i.start_date, false); // Format in EST (date only)
-    const endDate = formatDateInEST(i.end_date, false); // Format in EST (date only)
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i.id || ''}</td><td>${i.custom_id || ''}</td><td>${i.name}</td><td>${i.status || ''}</td><td>${i.shirt_size || ''}</td><td>${i.computed_hours || 0}</td><td>${startDate}</td><td>${endDate}</td><td>${createdDate}</td><td>${updatedDate}</td><td style="white-space:nowrap;"><button onclick="window.editInitiative(${i.id})">Edit</button><button onclick="window.deleteInitiative(${i.id})" style="background:var(--red)">Del</button><button onclick="window.showAuditTrail('${i.id}', '${i.name}')">🔍</button></td>`;
+async function loadInitiatives(){
+  const res=await fetch(API+'/api/initiatives');const list=await res.json();
+  const tbody=document.querySelector('#init-table tbody');tbody.innerHTML='';
+  list.forEach(i=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i.name}</td><td>${JSON.parse(i.selected_factors).length}</td><td>${i.shirt_size}</td>
+      <td><pre class='small'>${JSON.stringify(JSON.parse(i.computed_hours))}</pre></td>`;
     tbody.appendChild(tr);
   });
-
-  // Update sort indicators in table headers
-  document.querySelectorAll('#init-table th.sortable-th').forEach(th => {
-    const arrowSpan = th.querySelector('.sort-arrow');
-    if (arrowSpan) {
-      arrowSpan.textContent = ''; // Clear existing arrow
-      if (th.dataset.sort === sortBy) {
-        arrowSpan.textContent = sortDirection === 'asc' ? ' ▲' : ' ▼';
-      }
-    }
-  });
-
-  // Re-attach sort event listeners after table content is rendered
-  setupInitiativeTableSorting();
 }
-
-function addInitiative() {
-    document.getElementById('init-id').value = '';
-    document.getElementById('init-name').value = '';
-    document.getElementById('init-custom-id').value = '';
-    document.getElementById('init-desc').value = '';
-    document.getElementById('init-priority').value = 'Low';
-    document.getElementById('init-priority-num').value = '';
-    document.getElementById('init-status').value = 'To Do';
-    document.getElementById('init-start-date').value = '';
-    document.getElementById('init-end-date').value = '';
-    document.getElementById('init-scope').value = '';
-    document.getElementById('init-out').value = '';
-    document.getElementById('init-created').textContent = ''; // Use textContent for span
-    document.getElementById('init-updated').textContent = ''; // Use textContent for span
-    document.getElementById('init-calculated-shirt-size').textContent = ''; // Clear shirt size
-    window.selectedFactors = [];
-    window.currentInitiativeJournal = []; // Clear journal for new initiative
-    renderSelectedFactorsSummary();
-    renderJournalLog(); // Render empty journal
-    document.getElementById('journal-comment-input').value = ''; // Clear comment input
-    openModal('init');
-}
-
-function editInitiative(id) {
-    console.log('editInitiative called with ID:', id);
-    // Convert both the passed ID and the IDs in the list to numbers for reliable comparison
-    const numericId = parseInt(id, 10);
-    console.log('Parsed numeric ID:', numericId);
-    console.log('Current window.initList:', window.initList);
-
-    const init = window.initList.find(x => parseInt(x.id, 10) === numericId);
-    
-    if (!init) {
-        console.error('Initiative not found with numeric ID:', numericId, 'Full list:', window.initList);
-        showMessage('Error', 'Initiative not found. Please refresh and try again.', 'error');
-        return;
-    }
-    console.log('Found initiative:', init);
-
-    document.getElementById('init-id').value = init.id;
-    document.getElementById('init-name').value = init.name;
-    document.getElementById('init-custom-id').value = init.custom_id || '';
-    document.getElementById('init-desc').value = init.description || '';
-    document.getElementById('init-priority').value = init.priority || 'Low';
-    document.getElementById('init-priority-num').value = init.priority_num || '';
-    document.getElementById('init-status').value = init.status || 'To Do';
-    document.getElementById('init-start-date').value = init.start_date ? init.start_date.substring(0, 10) : '';
-    document.getElementById('init-end-date').value = init.end_date ? init.end_date.substring(0, 10) : '';
-    document.getElementById('init-scope').value = init.scope || '';
-    document.getElementById('init-out').value = init.out_of_scope || '';
-    document.getElementById('init-created').textContent = formatDateInEST(init.created_at); // Use textContent for span
-    document.getElementById('init-updated').textContent = formatDateInEST(init.updated_at); // Use textContent for span
-    document.getElementById('init-calculated-shirt-size').textContent = `Calculated T-Shirt Size: ${init.shirt_size || 'N/A'} (${init.computed_hours || 0}h)`; // Display shirt size and hours
-    // These fields are already parsed by the backend, so no need to parse again
-    window.selectedFactors = init.selected_factors || []; 
-    window.currentInitiativeJournal = init.journal_entries || []; 
-    renderSelectedFactorsSummary();
-    renderJournalLog(); // Render the loaded journal entries
-    document.getElementById('journal-comment-input').value = ''; // Clear comment input
-    openModal('init');
-}
-async function deleteInitiative(id){ 
-  showMessage('Confirm Delete', 'Are you sure you want to delete this initiative?', 'confirm');
-  // For now, keeping the original confirm behavior for simplicity, but noting it needs refactor.
-  if(!confirm('Delete?')) return; 
-  await fetch(API+`/api/initiatives/${id}`,{method:'DELETE'}); loadInitiatives(); 
-}
-async function saveInitiative(){ 
-    const id=document.getElementById('init-id').value.trim(); 
-    const name=document.getElementById('init-name').value.trim(); 
-    if(!name){showMessage('Error', 'Name required', 'error');return;} 
-    const customId=document.getElementById('init-custom-id').value.trim(); 
-    const description=document.getElementById('init-desc').value.trim(); 
-    const priority=document.getElementById('init-priority').value; 
-    const priorityNum=+document.getElementById('init-priority-num').value||0; 
-    const status=document.getElementById('init-status').value; 
-    const start_date=document.getElementById('init-start-date').value.trim();
-    const end_date=document.getElementById('init-end-date').value.trim();
-    const classification='Internal'; 
-    const scope=document.getElementById('init-scope').value.trim(); 
-    const outOf=document.getElementById('init-out').value.trim(); 
-    
-    const payload={
-        name,
-        custom_id: customId,
-        description,
-        priority,
-        priority_num: priorityNum,
-        status,
-        classification,
-        scope,
-        out_of_scope: outOf,
-        selected_factors: window.selectedFactors,
-        start_date: start_date || null,
-        end_date: end_date || null,
-        journal_entries: window.currentInitiativeJournal // Send as array, backend will stringify
-    }; 
-    const url=id?`/api/initiatives/${id}`:'/api/initiatives'; 
-    const method=id?'PUT':'POST'; 
-    const res=await fetch(API+url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); 
-    if (!res.ok) { showMessage('Error', 'Error:' + res.status, 'error'); return; }
-    closeModal('init'); 
-    loadInitiatives(); 
-}
-
-// Audit Trail
-async function showAuditTrail(initiativeId, initiativeName) {
-    document.getElementById('audit-title').textContent = `Audit Trail: ${initiativeName}`;
-    const auditContent = document.getElementById('audit-content');
-    auditContent.innerHTML = 'Loading...';
-    openModal('audit');
-
-    try {
-        // Fetch the consolidated journal entries (which now include audit actions)
-        const res = await fetch(API + `/api/initiatives/${initiativeId}/audit`);
-        if (!res.ok) { throw new Error('Failed to fetch audit trail.'); }
-        const auditLog = await res.json(); // This is now the journal_entries array
-        
-        auditContent.innerHTML = '';
-        if (auditLog.length === 0) {
-            auditContent.innerHTML = '<p>No audit history for this initiative.</p>';
-        } else {
-            // Sort entries by timestamp in descending order (latest first)
-            const sortedAuditLog = [...auditLog].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-            sortedAuditLog.forEach(entry => { // Iterate over all entries, not just filtered audit ones
-                const logItem = document.createElement('div');
-                logItem.className = 'audit-item';
-
-                let details = '';
-                if (entry.type === 'audit') {
-                    logItem.classList.add('audit'); // Add audit class for styling
-                    if (entry.action === 'created') {
-                        const newData = entry.new_data; // Already parsed by backend
-                        details = `Created with estimated hours: ${newData.computed_hours} and size: ${newData.shirt_size}.`;
-                    } else if (entry.action === 'updated') {
-                        const oldData = entry.old_data; // Already parsed by backend
-                        const newData = entry.new_data; // Already parsed by backend
-                        
-                        let oldFactors = [];
-                        try {
-                            oldFactors = JSON.parse(oldData.selected_factors || '[]');
-                        } catch (e) {
-                            console.error("Error parsing oldData.selected_factors in showAuditTrail:", e, oldData.selected_factors);
-                        }
-                        
-                        let newFactors = [];
-                        try {
-                            newFactors = JSON.parse(newData.selected_factors || '[]');
-                        } catch (e) {
-                            console.error("Error parsing newData.selected_factors in showAuditTrail:", e, newData.selected_factors);
-                        }
-
-                        const diffs = [];
-                        // Keys to compare for audit log (excluding internal/timestamp fields)
-                        const keysToCompare = [
-                            'name', 'custom_id', 'description', 'priority', 'priority_num',
-                            'status', 'classification', 'scope', 'out_of_scope',
-                            'computed_hours', 'shirt_size', 'start_date', 'end_date'
-                        ];
-
-                        for (const key of keysToCompare) {
-                            const oldValue = oldData[key];
-                            const newValue = newData[key];
-                            // Special handling for date fields to compare only YYYY-MM-DD part
-                            if (key === 'start_date' || key === 'end_date') {
-                                const oldDate = (oldValue || '').substring(0, 10);
-                                const newDate = (newValue || '').substring(0, 10);
-                                if (oldDate !== newDate) {
-                                    diffs.push(`- Changed ${key} from <span class="diff-removed">${oldDate}</span> to <span class="diff-added">${newDate}</span>`);
-                                }
-                            } else {
-                                // Compare other fields directly.
-                                if (oldValue !== newValue) {
-                                    diffs.push(`- Changed ${key} from <span class="diff-removed">${oldValue}</span> to <span class="diff-added">${newValue}</span>`);
-                                }
-                            }
-                        }
-
-                        // Compare selected_factors separately
-                        // Sort factors before stringifying for consistent comparison
-                        const oldFactorsStr = JSON.stringify([...oldFactors].sort((a,b) => a.factorId.localeCompare(b.factorId)));
-                        const newFactorsStr = JSON.stringify([...newFactors].sort((a,b) => a.factorId.localeCompare(b.factorId)));
-
-                        if (oldFactorsStr !== newFactorsStr) {
-                            // Detailed factor changes
-                            newFactors.forEach(newFactor => {
-                                const oldFactor = oldFactors.find(of => of.factorId === newFactor.factorId);
-                                if (!oldFactor) {
-                                    diffs.push(`- <span class="diff-added">Added factor: ${newFactor.name} (Qty: ${newFactor.quantity})</span>`);
-                                } else if (oldFactor.quantity !== newFactor.quantity) {
-                                    diffs.push(`- Changed quantity for factor ${newFactor.name} from <span class="diff-removed">${oldFactor.quantity}</span> to <span class="diff-added">${newFactor.quantity}</span>.`);
-                                }
-                            });
-
-                            oldFactors.forEach(oldFactor => {
-                                const newFactor = newFactors.find(nf => nf.factorId === oldFactor.factorId);
-                                if (!newFactor) {
-                                    diffs.push(`- <span class="diff-removed">Removed factor: ${oldFactor.name} (Qty: ${oldFactor.quantity})</span>`);
-                                }
-                            });
-                        }
-                        details = diffs.length > 0 ? diffs.join('<br>') : 'No changes to tracked fields.';
-                    } else if (entry.action === 'deleted') {
-                        details = 'Initiative was deleted.'; // This entry would only exist if we had a separate audit table for deletions
-                    }
-                    logItem.innerHTML = `
-                        <h4>${entry.action.charAt(0).toUpperCase() + entry.action.slice(1)} on ${formatDateInEST(entry.timestamp)}</h4>
-                        <p>${details}</p>
-                    `;
-                } else { // type === 'comment'
-                    logItem.innerHTML = `
-                        <h4>Comment on ${formatDateInEST(entry.timestamp)}</h4>
-                        <p>${entry.text}</p>
-                    `;
-                }
-                auditContent.appendChild(logItem);
-            });
-        }
-
-    } catch (err) {
-        auditContent.innerHTML = `<p style="color:var(--red);">Error fetching audit trail: ${err.message}</p>`;
-    }
-}
-
-
-// Shirt Sizes Configuration
-async function loadShirtSizes() {
-    const res = await fetch(API + '/api/shirt-sizes');
-    const sizes = await res.json();
-    window.shirtSizes = sizes;
-    const tbody = document.querySelector('#shirt-size-table tbody');
-    tbody.innerHTML = '';
-    sizes.forEach(size => {
-        const days = (size.threshold_hours / 8).toFixed(1);
-        const months = (size.threshold_hours / 160).toFixed(1); // Updated to 160 hours/month
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${size.size}</td><td><input type="number" min="0" value="${size.threshold_hours}" oninput="window.updateCalculatedValues(this)"></td><td id="days-${size.size}">${days}</td><td id="months-${size.size}">${months}</td>`;
-        tbody.appendChild(tr);
-    });
-}
-
-function updateCalculatedValues(inputElement) {
-    const hours = +inputElement.value;
-    const size = inputElement.closest('tr').cells[0].textContent;
-    const days = (hours / 8).toFixed(1);
-    const months = (hours / 160).toFixed(1); // Updated to 160 hours/month
-    document.getElementById(`days-${size}`).textContent = days;
-    document.getElementById(`months-${size}`).textContent = months;
-}
-
-async function saveShirtSizes() {
-    const newSizes = [];
-    const rows = document.querySelectorAll('#shirt-size-table tbody tr');
-    rows.forEach(row => {
-        const size = row.cells[0].textContent;
-        const input = row.querySelector('input');
-        if (input) {
-            newSizes.push({ size: size, threshold_hours: +input.value });
-        }
-    });
-
-    try {
-        const res = await fetch(API + '/api/shirt-sizes', {
-            method: 'PUT',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify(newSizes)
-        });
-        if (!res.ok) { throw new Error('Failed to save shirt sizes.'); }
-        await loadShirtSizes();
-        showMessage('Success', 'Shirt sizes saved successfully.', 'success');
-    } catch (err) {
-        showMessage('Error', 'Error saving shirt sizes: ' + err.message, 'error');
-    }
-}
-async function showShirtSizeAuditTrail() {
-    document.getElementById('shirt-size-audit-title').textContent = `Shirt Size Audit Trail`;
-    const auditContent = document.getElementById('shirt-size-audit-content');
-    auditContent.innerHTML = 'Loading...';
-    openModal('shirt-size-audit');
-    
-    try {
-        const res = await fetch(API + '/api/shirt-sizes/audit');
-        if (!res.ok) { throw new Error('Failed to fetch shirt size audit trail'); }
-        const auditLog = await res.json();
-        
-        auditContent.innerHTML = '';
-        if (auditLog.length === 0) {
-            auditContent.innerHTML = '<p>No audit history for shirt sizes.</p>';
-        } else {
-            auditLog.forEach(log => {
-                const logItem = document.createElement('div');
-                logItem.className = 'audit-item';
-
-                let details = '';
-                if (log.action === 'updated') {
-                    const oldData = JSON.parse(log.old_data);
-                    const newData = JSON.parse(log.new_data);
-                    
-                    const diffs = [];
-                    oldData.forEach(oldSize => {
-                        const newSize = newData.find(ns => ns.size === oldSize.size);
-                        if (newSize && oldSize.threshold_hours !== newSize.threshold_hours) {
-                            diffs.push(`- Changed threshold for size ${oldSize.size} from <span class="diff-removed">${oldSize.threshold_hours}</span> to <span class="diff-added">${newSize.threshold_hours}</span>.`);
-                        }
-                    });
-                    details = diffs.length > 0 ? diffs.join('<br>') : 'No changes to visible fields.';
-                }
-                
-                logItem.innerHTML = `
-                    <h4>${log.action} on ${formatDateInEST(log.timestamp)}</h4>
-                    <p>${details}</p>
-                `;
-                auditContent.appendChild(logItem);
-            });
-        }
-    } catch (err) {
-        auditContent.innerHTML = `<p style="color:var(--red);">Error fetching audit trail: ${err.message}</p>`;
-    }
-}
-
-// Export Initiatives
-async function exportInitiatives() {
-    try {
-        const res = await fetch(API + '/api/initiatives');
-        if (!res.ok) { throw new Error('Failed to fetch initiatives for export.'); }
-        const initiatives = await res.json();
-
-        const headers = [
-            "Internal ID", "User-Defined ID", "Name", "Description", "Priority", "Priority Number",
-            "Status", "Classification", "Scope", "Out of Scope",
-            "Estimated Hours", "Estimated Days", "Estimated Months", "Shirt Size",
-            "Start Date", "End Date",
-            "Selected Factors", "Created At", "Updated At"
-        ];
-        
-        const rows = [headers.join('\t')]; // Start with headers
-
-        for (const initiative of initiatives) {
-            const estimatedHours = initiative.computed_hours || 0;
-            const estimatedDays = (estimatedHours / 8).toFixed(1);
-            const estimatedMonths = (estimatedHours / 160).toFixed(1); // Updated to 160 hours/month
-
-            let selectedFactorsSummary = '';
-            if (initiative.selected_factors) {
-                try {
-                    // selected_factors is already an array from backend
-                    selectedFactorsSummary = initiative.selected_factors.map(f => {
-                        const totalFactorHours = Object.values(f.hoursPerResourceType || {}).reduce((sum, h) => sum + h, 0);
-                        return `${f.name} (Qty: ${f.quantity}, Hours: ${totalFactorHours * f.quantity})`;
-                    }).join(', ');
-                } catch (e) {
-                    console.error("Error processing selected factors for export:", e);
-                    selectedFactorsSummary = "Error processing factors";
-                }
-            }
-
-            const rowData = [
-                initiative.id || '',
-                initiative.custom_id || '',
-                initiative.name || '',
-                initiative.description || '',
-                initiative.priority || '',
-                initiative.priority_num || 0,
-                initiative.status || '',
-                initiative.classification || '',
-                initiative.scope || '',
-                initiative.out_of_scope || '',
-                estimatedHours,
-                estimatedDays,
-                estimatedMonths,
-                initiative.shirt_size || '',
-                formatDateInEST(initiative.start_date, false), // Format start_date
-                formatDateInEST(initiative.end_date, false),   // Format end_date
-                selectedFactorsSummary,
-                formatDateInEST(initiative.created_at, true),  // Format created_at
-                formatDateInEST(initiative.updated_at, true)   // Format updated_at
-            ];
-            rows.push(rowData.map(item => {
-                // Ensure no tabs or newlines within a field for TSV
-                return String(item).replace(/\t/g, ' ').replace(/\n/g, ' ');
-            }).join('\t'));
-        }
-
-        const tsvContent = rows.join('\n');
-        const blob = new Blob([tsvContent], { type: 'text/tab-separated-values;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const hh = String(now.getHours()).padStart(2, '0');
-        const min = String(now.getMinutes()).padStart(2, '0');
-        const ss = String(now.getSeconds()).padStart(2, '0');
-        const filename = `initiatives_export_${yyyy}${mm}${dd}_${hh}${min}${ss}.tsv`;
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        showMessage('Success', 'Initiatives exported successfully!', 'success');
-
-    } catch (error) {
-        console.error('Export failed:', error);
-        showMessage('Error', 'Failed to export initiatives: ' + error.message, 'error');
-    }
-}
-
-async function exportResourceView() {
-    try {
-        // Ensure all necessary data is loaded
-        await loadRT();
-        await loadEF();
-        await loadInitiatives();
-
-        const initiatives = window.initList;
-        const resourceTypes = window.rtList;
-        const estimationFactors = window.efList;
-
-        const headers = [
-            "Internal ID", "User-Defined ID", "Name", "Created", "Updated", "Status", "Shirt Size",
-            "Start Date", "End Date", "Resource Type", "Factor", "Factor Hours"
-        ];
-        const rows = [headers.join('\t')];
-
-        for (const initiative of initiatives) {
-            const createdDate = formatDateInEST(initiative.created_at, true);
-            const updatedDate = formatDateInEST(initiative.updated_at, true);
-            const startDate = formatDateInEST(initiative.start_date, false);
-            const endDate = formatDateInEST(initiative.end_date, false);
-
-            const baseRowData = [
-                initiative.id || '', // Internal ID
-                initiative.custom_id || '',
-                initiative.name || '',
-                createdDate,
-                updatedDate,
-                initiative.status || '',
-                initiative.shirt_size || '',
-                startDate,
-                endDate
-            ];
-
-            let hasFactors = false;
-            if (initiative.selected_factors) {
-                // selected_factors is already an array from backend
-                for (const selectedFactor of initiative.selected_factors) {
-                    const factorDetails = estimationFactors.find(f => f.id === selectedFactor.factorId);
-                    if (factorDetails && factorDetails.hoursPerResourceType) {
-                        hasFactors = true;
-                        for (const rtId in factorDetails.hoursPerResourceType) {
-                            const resourceType = resourceTypes.find(rt => rt.id === rtId);
-                            if (resourceType) {
-                                const factorHours = factorDetails.hoursPerResourceType[rtId] * selectedFactor.quantity;
-                                rows.push([
-                                    ...baseRowData,
-                                    resourceType.name,
-                                    factorDetails.name,
-                                    factorHours.toFixed(1) // Format to one decimal place
-                                ].map(item => String(item).replace(/\t/g, ' ').replace(/\n</g, ' ')).join('\t'));
-                            }
-                        }
-                    }
-                }
-            }
-
-            // If no factors or no resource-specific hours, add a row with empty factor/resource data
-            if (!hasFactors) {
-                rows.push([
-                    ...baseRowData,
-                    '', // Resource Type
-                    '', // Factor
-                    ''  // Factor Hours
-                ].map(item => String(item).replace(/\t/g, ' ').replace(/\n</g, ' ')).join('\t'));
-            }
-        }
-
-        const tsvContent = rows.join('\n');
-        const blob = new Blob([tsvContent], { type: 'text/tab-separated-values;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const hh = String(now.getHours()).padStart(2, '0');
-        const min = String(now.getMinutes()).padStart(2, '0');
-        const ss = String(now.getSeconds()).padStart(2, '0');
-        const filename = `initiatives_resource_view_export_${yyyy}${mm}${dd}_${hh}${min}${ss}.tsv`;
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        showMessage('Success', 'Resource view exported successfully!', 'success');
-
-    } catch (error) {
-        console.error('Export resource view failed:', error);
-        showMessage('Error', 'Failed to export resource view: ' + error.message, 'error');
-    }
-}
-
-// Import Initiatives
-function importInitiatives() {
-    document.getElementById('importFileInput').click();
-}
-
-async function handleImportFile(event) {
-    const file = event.target.files[0];
-    if (!file) {
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        try {
-            const tsvContent = e.target.result;
-            const lines = tsvContent.split('\n').filter(line => line.trim() !== '');
-
-            if (lines.length === 0) {
-                showMessage('Error', 'The imported file is empty.', 'error');
-                return;
-            }
-
-            // Define expected headers and their corresponding initiative object keys
-            // The order here matters for parsing the TSV columns
-            const expectedHeaders = [
-                "User-Defined ID", "Name", "Description", "Priority", "Priority Number",
-                "Status", "Start Date", "End Date", "In Scope", "Out of Scope"
-            ];
-            
-            const headerMap = {
-                "User-Defined ID": "custom_id",
-                "Name": "name",
-                "Description": "description",
-                "Priority": "priority",
-                "Priority Number": "priority_num",
-                "Status": "status",
-                "Start Date": "start_date",
-                "End Date": "end_date",
-                "In Scope": "scope",
-                "Out of Scope": "out_of_scope"
-            };
-
-            const fileHeaders = lines[0].split('\t').map(h => h.trim());
-            const initiativesToImport = [];
-
-            // Basic header validation (check if all expected headers are present)
-            const missingHeaders = expectedHeaders.filter(header => !fileHeaders.includes(header));
-            if (missingHeaders.length > 0) {
-                showMessage('Error', `Missing required headers in TSV: ${missingHeaders.join(', ')}. Please ensure the TSV file has these columns.`, 'error');
-                return;
-            }
-
-            for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split('\t');
-                const initiative = {};
-
-                for (let j = 0; j < fileHeaders.length; j++) {
-                    const header = fileHeaders[j];
-                    const key = headerMap[header];
-                    if (key && values[j] !== undefined) {
-                        let value = values[j].trim();
-                        if (key === 'priority_num') {
-                            initiative[key] = parseInt(value, 10) || 0;
-                        } else if (key === 'start_date' || key === 'end_date') {
-                            // Ensure date format is YYYY-MM-DD for backend
-                            if (value) {
-                                try {
-                                    const date = new Date(value);
-                                    if (!isNaN(date.getTime())) {
-                                        initiative[key] = date.toISOString().substring(0, 10);
-                                    } else {
-                                        initiative[key] = null; // Invalid date
-                                        console.warn(`Invalid date format for ${header}: ${value}`);
-                                    }
-                                } catch (e) {
-                                    initiative[key] = null;
-                                    console.warn(`Error parsing date for ${header}: ${value}`, e);
-                                }
-                            } else {
-                                initiative[key] = null;
-                            }
-                        } else {
-                            initiative[key] = value;
-                        }
-                    }
-                }
-                // Set default values for fields not in TSV or explicitly excluded
-                initiative.classification = 'Imported'; // Default for imported initiatives
-                initiative.selected_factors = []; // As per request, no factors on import
-                initiative.journal_entries = []; // As per request, no comments on import
-                initiative.status = initiative.status || 'To Do'; // Default status if not provided
-                initiative.priority = initiative.priority || 'Low'; // Default priority if not provided
-
-                initiativesToImport.push(initiative);
-            }
-
-            if (initiativesToImport.length === 0) {
-                showMessage('Warning', 'No valid initiative data found in the file after parsing.', 'warning');
-                return;
-            }
-
-            const res = await fetch(API + '/api/initiatives/import', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(initiativesToImport)
-            });
-
-            if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.message || `Server responded with status ${res.status}`);
-            }
-
-            const result = await res.json();
-            showMessage('Success', `${result.importedCount} initiatives imported successfully!`, 'success');
-            loadInitiatives(); // Reload the table to show new initiatives
-
-        } catch (error) {
-            console.error('Import failed:', error);
-            showMessage('Error', 'Failed to import initiatives: ' + error.message, 'error');
-        } finally {
-            // Clear the file input value to allow re-importing the same file
-            event.target.value = '';
-        }
-    };
-    reader.readAsText(file);
-}
-
-// Function to attach event listeners for sorting
-function setupInitiativeTableSorting() {
-    const tableHeaders = document.querySelectorAll('#init-table th.sortable-th');
-    tableHeaders.forEach(header => {
-        // Remove any existing listeners to prevent duplicates
-        header.removeEventListener('click', handleSortClick);
-        // Add the new listener
-        header.addEventListener('click', handleSortClick);
-    });
-}
-
-// Handler for sort clicks
-function handleSortClick(event) {
-    const header = event.currentTarget;
-    const sortBy = header.dataset.sort;
-    if (sortBy) {
-        if (currentSortColumn === sortBy) {
-            currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            currentSortColumn = sortBy;
-            currentSortDirection = 'asc'; // Default to ascending for new column
-        }
-        loadInitiatives(currentSortColumn, currentSortDirection);
-    }
-}
-
-
-// Bootstrap
-window.addEventListener('DOMContentLoaded',()=>{ loadRT().then(()=>{ loadEF(); }); loadInitiatives(); });
-
 </script>
 </body>
 </html>

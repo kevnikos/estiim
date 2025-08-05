@@ -1,5 +1,0 @@
-User-Defined ID	Name	Description	Priority	Priority Number	Status	Start Date	End Date	In Scope	Out of Scope
-PROJ-001	Website Redesign	Complete overhaul of the company website for better UX.	High	1	To Do	2025-09-01	2025-12-31	New UI/UX, improved performance, mobile responsiveness.	Backend refactoring, new feature development.
-APP-DEV-005	Mobile App Feature X	Implement new user authentication flow in mobile app.	Medium	3	Draft	2025-08-15	2025-10-30	OAuth2 integration, biometric login.	Legacy authentication methods.
-MKTG-2025-Q4	Q4 Marketing Campaign	Develop and launch marketing campaign for holiday season.	High	2	Proposal	2025-10-01	2025-12-15	Social media ads, email marketing, influencer collaborations.	TV ads, print media.
-OPS-UPG-010	Database Migration	Migrate customer database to new cloud platform.	Medium	5	Re-Estimation	2026-01-01	2026-03-31	Data transfer, schema conversion, testing.	Application code changes.
