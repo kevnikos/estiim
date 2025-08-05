@@ -9,10 +9,15 @@ import { body, validationResult } from 'express-validator';
 import { v4 as uuid } from 'uuid'; // Still needed for audit trail and other IDs
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs/promises'; // Import Node.js file system promises API
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+
+// Define database file path
+const DB_FILE_PATH = path.join(__dirname, 'estiim.db');
+const BACKUPS_DIR = path.join(__dirname, 'backups'); // Define backups directory
 
 // T-Shirt size calculation logic
 async function getShirtSize(db, hours) {
@@ -28,65 +33,112 @@ async function getShirtSize(db, hours) {
     if (hours >= size.threshold_hours) {
       determinedSize = size.size; // This size's threshold is met, so it's a candidate
     } else {
-      // If current hours are less than the threshold, the previous size was the correct one.
-      // This break ensures we pick the smallest size that fits the hours.
-      break; 
+      // If hours are less than the current size's threshold,
+      // then the previously determinedSize (which met its threshold) is the correct one.
+      break;
     }
   }
-  console.log('DEBUG: Determined size:', determinedSize);
+  console.log('DEBUG: Determined shirtSize:', determinedSize);
   return determinedSize;
 }
 
-// Factor calculation logic
-async function calculateFactors(db, selectedFactors) {
-  let totalHours = 0;
-  if (!selectedFactors || selectedFactors.length === 0) {
-    return { totalHours: 0, shirtSize: await getShirtSize(db, 0) };
+/**
+ * Ensures the backup directory exists.
+ */
+async function ensureBackupDirectory() {
+  try {
+    await fs.mkdir(BACKUPS_DIR, { recursive: true });
+    console.log(`INFO: Ensured backup directory exists at: ${BACKUPS_DIR}`);
+  } catch (error) {
+    console.error(`ERROR: Failed to create backup directory ${BACKUPS_DIR}:`, error);
+    // Continue even if directory creation fails, as it might just be a permission issue
+    // and the app might still function without backups.
   }
+}
 
-  // Ensure selectedFactors is an array of objects, not a JSON string
-  let parsedFactors = selectedFactors;
-  if (typeof selectedFactors === 'string') {
-    try {
-      parsedFactors = JSON.parse(selectedFactors);
-    } catch (e) {
-      console.error("Error parsing selected_factors JSON:", e);
-      parsedFactors = [];
+/**
+ * Creates a timestamped backup of the database file.
+ */
+async function backupDatabase() {
+  await ensureBackupDirectory(); // Ensure backup directory exists before backing up
+
+  try {
+    // Check if the database file exists before attempting to copy
+    await fs.access(DB_FILE_PATH, fs.constants.F_OK);
+
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    const backupFileName = `estiim-db-${yyyy}${mm}${dd}${hh}${min}${ss}.bak`;
+    const backupFilePath = path.join(BACKUPS_DIR, backupFileName);
+
+    await fs.copyFile(DB_FILE_PATH, backupFilePath);
+    console.log(`INFO: Database backed up to: ${backupFilePath}`);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      console.warn(`WARN: Database file not found at ${DB_FILE_PATH}. Skipping backup.`);
+    } else {
+      console.error(`ERROR: Failed to backup database:`, error);
     }
   }
+}
 
-  for (const sf of parsedFactors) {
-    const factor = await db.get('SELECT hoursPerResourceType FROM estimation_factors WHERE id = ?', [sf.factorId]);
-    if (factor && factor.hoursPerResourceType) {
-      try {
-        const hoursPerResourceType = JSON.parse(factor.hoursPerResourceType);
-        const factorTotalHours = Object.values(hoursPerResourceType).reduce((sum, h) => sum + h, 0);
-        totalHours += factorTotalHours * (sf.quantity || 1);
-      } catch (e) {
-        console.error("Error parsing hoursPerResourceType JSON for factor:", sf.factorId, e);
-      }
+/**
+ * Helper function for deep comparison of hoursPerResourceType objects.
+ * @param {object} obj1 - First object to compare.
+ * @param {object} obj2 - Second object to compare.
+ * @returns {boolean} True if objects have the same keys and values, false otherwise.
+ */
+function areHoursPerResourceTypeEqual(obj1, obj2) {
+  const keys1 = Object.keys(obj1);
+  const keys2 = Object.keys(obj2);
+
+  if (keys1.length !== keys2.length) {
+    return false;
+  }
+
+  for (const key of keys1) {
+    if (obj1[key] !== obj2[key]) {
+      return false;
     }
   }
-  const shirtSize = await getShirtSize(db, totalHours);
-  return { totalHours, shirtSize };
+  return true;
 }
 
 
 export async function createApp() {
+  // Perform database backup immediately on startup
+  await backupDatabase();
+
+  // Express app
+  const app = express();
+  app.use(express.json());
+  app.use(express.static(PUBLIC_DIR));
+
+  // Debug logging
+  app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+  });
+
+  console.log(`INFO: Database file path: ${DB_FILE_PATH}`); // Log the database file path
+
+  // Open the database
   const db = await open({
-    filename: './estiim.db',
+    filename: DB_FILE_PATH, // Use the defined path
     driver: sqlite3.Database
   });
 
-  // Enable foreign key constraints
-  await db.run('PRAGMA foreign_keys = ON;');
-
-  // Schema bootstrap
+  // Database schema bootstrap
   await db.exec(`
     CREATE TABLE IF NOT EXISTS initiatives (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      custom_id TEXT UNIQUE,
       name TEXT NOT NULL,
+      custom_id TEXT,
       description TEXT,
       priority TEXT,
       priority_num INTEGER,
@@ -95,13 +147,13 @@ export async function createApp() {
       scope TEXT,
       out_of_scope TEXT,
       selected_factors TEXT, -- Stored as JSON string
-      journal_entries TEXT, -- Stored as JSON string
-      computed_hours REAL DEFAULT 0,
-      shirt_size TEXT DEFAULT 'XS',
-      start_date TEXT, -- YYYY-MM-DD
-      end_date TEXT, -- YYYY-MM-DD
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      computed_hours REAL,
+      shirt_size TEXT,
+      journal_entries TEXT, -- Stored as JSON string, holds comments and audit trail
+      start_date TEXT, -- Added start_date column
+      end_date TEXT,   -- Added end_date column
+      created_at TEXT,
+      updated_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS resource_types (
@@ -113,67 +165,142 @@ export async function createApp() {
     CREATE TABLE IF NOT EXISTS estimation_factors (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL UNIQUE,
-      hoursPerResourceType TEXT -- Stored as JSON string {resourceTypeId: hours}
+      description TEXT, -- Added description field to estimation_factors
+      hours_per_resource_type TEXT, -- Stored as JSON string { "resourceTypeId": hours }
+      journal_entries TEXT, -- Stored as JSON string, holds comments and audit trail
+      created_at TEXT, -- Added created_at column
+      updated_at TEXT -- Added updated_at column
+    );
+
+    CREATE TABLE IF NOT EXISTS estimation_factor_audit (
+      id TEXT PRIMARY KEY,
+      action TEXT NOT NULL,
+      old_data TEXT, -- JSON string of old estimation factor data
+      new_data TEXT, -- JSON string of new estimation factor data
+      timestamp TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS shirt_sizes (
       size TEXT PRIMARY KEY,
-      threshold_hours INTEGER NOT NULL
+      threshold_hours REAL NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS shirt_size_audit (
       id TEXT PRIMARY KEY,
       action TEXT NOT NULL,
-      old_data TEXT,
-      new_data TEXT,
-      timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+      old_data TEXT, -- JSON string of old shirt_sizes array
+      new_data TEXT, -- JSON string of new shirt_sizes array
+      timestamp TEXT NOT NULL
     );
   `);
 
-  // Seed initial shirt sizes if not present
-  const existingShirtSizes = await db.all('SELECT * FROM shirt_sizes');
-  if (existingShirtSizes.length === 0) {
-    console.log('Seeding initial shirt sizes...');
-    await db.run('INSERT OR IGNORE INTO shirt_sizes (size, threshold_hours) VALUES (?, ?)', ['XS', 0]);
-    await db.run('INSERT OR IGNORE INTO shirt_sizes (size, threshold_hours) VALUES (?, ?)', ['S', 40]);
-    await db.run('INSERT OR IGNORE INTO shirt_sizes (size, threshold_hours) VALUES (?, ?)', ['M', 120]);
-    await db.run('INSERT OR IGNORE INTO shirt_sizes (size, threshold_hours) VALUES (?, ?)', ['L', 300]);
-    await db.run('INSERT OR IGNORE INTO shirt_sizes (size, threshold_hours) VALUES (?, ?)', ['XL', 600]);
-    await db.run('INSERT OR IGNORE INTO shirt_sizes (size, threshold_hours) VALUES (?, ?)', ['XXL', 1000]);
+  // Seed default shirt sizes if table is empty
+  const existingSizes = await db.all('SELECT * FROM shirt_sizes');
+  if (existingSizes.length === 0) {
+    await db.run('INSERT INTO shirt_sizes (size, threshold_hours) VALUES (?, ?)', ['XS', 0]);
+    await db.run('INSERT INTO shirt_sizes (size, threshold_hours) VALUES (?, ?)', ['S', 40]);
+    await db.run('INSERT INTO shirt_sizes (size, threshold_hours) VALUES (?, ?)', ['M', 80]);
+    await db.run('INSERT INTO shirt_sizes (size, threshold_hours) VALUES (?, ?)', ['L', 160]);
+    await db.run('INSERT INTO shirt_sizes (size, threshold_hours) VALUES (?, ?)', ['XL', 320]);
+    await db.run('INSERT INTO shirt_sizes (size, threshold_hours) VALUES (?, ?)', ['XXL', 640]);
+    console.log('Default shirt sizes seeded.');
   }
-
-  const app = express();
-  app.use(express.json());
-  app.use(express.static(PUBLIC_DIR)); // Serve static files from public directory
-
-  // Middleware for logging all API requests
-  app.use((req, res, next) => {
-    console.log(`API Request: ${req.method} ${req.url}`);
-    next();
-  });
 
   // Routes for Initiatives
   app.get('/api/initiatives', async (req, res) => {
-    const initiatives = await db.all('SELECT * FROM initiatives');
-    // Parse JSON fields before sending
-    const parsedInitiatives = initiatives.map(init => ({
-      ...init,
-      selected_factors: init.selected_factors ? JSON.parse(init.selected_factors) : [],
-      journal_entries: init.journal_entries ? JSON.parse(init.journal_entries) : []
-    }));
-    res.json(parsedInitiatives);
+    const rows = await db.all('SELECT * FROM initiatives');
+    // Parse JSON fields before sending to client
+    rows.forEach(row => {
+      row.selected_factors = JSON.parse(row.selected_factors || '[]');
+      row.journal_entries = JSON.parse(row.journal_entries || '[]');
+      // Also parse old_data and new_data within journal_entries if they exist and are strings
+      row.journal_entries.forEach(entry => {
+        if (entry.type === 'audit') {
+          try {
+            if (typeof entry.old_data === 'string') {
+              entry.old_data = JSON.parse(entry.old_data);
+            }
+          } catch (e) {
+            console.error("Error parsing old_data in audit entry:", e, entry.old_data);
+            entry.old_data = {}; // Default to empty object on error
+          }
+          try {
+            if (typeof entry.new_data === 'string') {
+              entry.new_data = JSON.parse(entry.new_data);
+            }
+          } catch (e) {
+            console.error("Error parsing new_data in audit entry:", e, entry.new_data);
+            entry.new_data = {}; // Default to empty object on error
+          }
+        }
+      });
+    });
+    res.json(rows);
   });
 
   app.get('/api/initiatives/:id', async (req, res) => {
     const { id } = req.params;
-    const initiative = await db.get('SELECT * FROM initiatives WHERE id = ?', [id]);
-    if (!initiative) {
+    const row = await db.get('SELECT * FROM initiatives WHERE id = ?', [id]);
+    if (!row) {
       return res.status(404).json({ message: 'Initiative not found' });
     }
-    // Parse JSON fields before sending
-    initiative.selected_factors = initiative.selected_factors ? JSON.parse(initiative.selected_factors) : [];
-    initiative.journal_entries = initiative.journal_entries ? JSON.parse(initiative.journal_entries) : [];
-    res.json(initiative);
+    // Parse JSON fields before sending to client
+    row.selected_factors = JSON.parse(row.selected_factors || '[]');
+    row.journal_entries = JSON.parse(row.journal_entries || '[]');
+    // Also parse old_data and new_data within journal_entries if they exist and are strings
+    row.journal_entries.forEach(entry => {
+      if (entry.type === 'audit') {
+        try {
+          if (typeof entry.old_data === 'string') {
+            entry.old_data = JSON.parse(entry.old_data);
+          }
+        } catch (e) {
+          console.error("Error parsing old_data in audit entry:", e, entry.old_data);
+          entry.old_data = {}; // Default to empty object on error
+        }
+        try {
+          if (typeof entry.new_data === 'string') {
+            entry.new_data = JSON.parse(entry.new_data);
+          }
+        } catch (e) {
+          console.error("Error parsing new_data in audit entry:", e, entry.new_data);
+          entry.new_data = {}; // Default to empty object on error
+        }
+      }
+    });
+    res.json(row);
+  });
+
+  // Route to get audit trail for a specific initiative (returns journal_entries)
+  app.get('/api/initiatives/:id/audit', async (req, res) => {
+    const { id } = req.params;
+    const row = await db.get('SELECT journal_entries FROM initiatives WHERE id = ?', [id]);
+    if (!row) {
+      return res.status(404).json({ message: 'Initiative not found' });
+    }
+    const journalEntries = JSON.parse(row.journal_entries || '[]');
+    // Parse old_data and new_data within journal_entries if they exist and are strings
+    journalEntries.forEach(entry => {
+      if (entry.type === 'audit') {
+        try {
+          if (typeof entry.old_data === 'string') {
+            entry.old_data = JSON.parse(entry.old_data);
+          }
+        } catch (e) {
+          console.error("Error parsing old_data in audit entry:", e, entry.old_data);
+          entry.old_data = {}; // Default to empty object on error
+        }
+        try {
+          if (typeof entry.new_data === 'string') {
+            entry.new_data = JSON.parse(entry.new_data);
+            }
+          } catch (e) {
+            console.error("Error parsing new_data in audit entry:", e, entry.new_data);
+            entry.new_data = {};
+          }
+        }
+      });
+    res.json(journalEntries);
   });
 
   app.post('/api/initiatives',
@@ -184,56 +311,96 @@ export async function createApp() {
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const {
-        custom_id, name, description, priority, priority_num, status,
-        classification, scope, out_of_scope, selected_factors, journal_entries,
-        start_date, end_date
-      } = req.body;
       const now = new Date().toISOString();
+      const {
+        name, custom_id, description, priority, priority_num, status,
+        classification, scope, out_of_scope, selected_factors, journal_entries,
+        start_date, end_date // Destructure new date fields
+      } = req.body;
 
-      // Calculate computed_hours and shirt_size based on selected_factors
-      const { totalHours, shirtSize } = await calculateFactors(db, selected_factors);
+      console.log('DEBUG (POST): selected_factors received:', selected_factors);
 
-      const result = await db.run(
-        `INSERT INTO initiatives (custom_id, name, description, priority, priority_num, status,
-          classification, scope, out_of_scope, selected_factors, journal_entries,
-          computed_hours, shirt_size, start_date, end_date, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          custom_id || null, name, description || null, priority || 'Low', priority_num || 0, status || 'To Do',
-          classification || 'Internal', scope || null, out_of_scope || null,
-          JSON.stringify(selected_factors || []), // Store as JSON string
-          JSON.stringify(journal_entries || []), // Store as JSON string
-          totalHours, shirtSize,
-          start_date || null, end_date || null,
-          now, now
-        ]
-      );
+      // Calculate computed_hours and shirt_size from selected_factors
+      let computedHours = 0;
+      if (selected_factors && Array.isArray(selected_factors)) {
+        for (const factor of selected_factors) {
+          if (factor.hoursPerResourceType) {
+            const totalFactorHours = Object.values(factor.hoursPerResourceType).reduce((sum, h) => sum + h, 0);
+            computedHours += totalFactorHours * (factor.quantity || 1);
+          }
+        }
+      }
+      // Round to one decimal place to avoid floating point inaccuracies
+      computedHours = parseFloat(computedHours.toFixed(1));
 
-      const newInitiative = await db.get('SELECT * FROM initiatives WHERE id = ?', [result.lastID]);
-      
+      console.log('DEBUG (POST): Calculated computedHours:', computedHours);
+
+      const shirtSize = await getShirtSize(db, computedHours);
+      console.log('DEBUG (POST): Determined shirtSize:', shirtSize);
+
+      const newJournalEntries = JSON.parse(JSON.stringify(journal_entries || [])); // Deep copy
+
+      // Prepare new data for audit snapshot
+      const newDataForAudit = {
+        name, custom_id, description, priority, priority_num, status,
+        classification, scope, out_of_scope,
+        selected_factors: JSON.stringify(selected_factors || []), // CRITICAL FIX: Always stringify selected_factors for audit
+        computed_hours: computedHours.toFixed(1), // Store as string for consistency
+        shirt_size: shirtSize,
+        start_date: start_date || null, // Include in audit snapshot
+        end_date: end_date || null      // Include in audit snapshot
+      };
+
       // Add audit entry for creation
       const auditEntry = {
         timestamp: now,
         type: 'audit',
         action: 'created',
-        new_data: { // Store relevant new data for audit
-            name: newInitiative.name,
-            custom_id: newInitiative.custom_id,
-            computed_hours: newInitiative.computed_hours,
-            shirt_size: newInitiative.shirt_size,
-            // Include other fields as needed for audit trail
-            selected_factors: newInitiative.selected_factors // Already stringified
-        }
+        old_data: JSON.stringify({}), // Store empty object as JSON string
+        new_data: JSON.stringify(newDataForAudit) // Store new data as JSON string
       };
-      // Fetch current journal entries, add audit entry, then update
-      let currentJournal = newInitiative.journal_entries ? JSON.parse(newInitiative.journal_entries) : [];
-      currentJournal.push(auditEntry);
-      await db.run('UPDATE initiatives SET journal_entries = ? WHERE id = ?', [JSON.stringify(currentJournal), newInitiative.id]);
+      newJournalEntries.push(auditEntry);
 
-      // Parse JSON fields before sending response
-      newInitiative.selected_factors = JSON.parse(newInitiative.selected_factors);
-      newInitiative.journal_entries = JSON.parse(JSON.stringify(currentJournal)); // Re-parse to ensure consistency
+      const result = await db.run(
+        `INSERT INTO initiatives (name, custom_id, description, priority, priority_num, status, classification, scope, out_of_scope, selected_factors, computed_hours, shirt_size, journal_entries, start_date, end_date, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          name, custom_id, description, priority, priority_num, status,
+          classification, scope, out_of_scope,
+          JSON.stringify(selected_factors || []),
+          computedHours,
+          shirtSize,
+          JSON.stringify(newJournalEntries), // Store journal entries as JSON string
+          start_date, // Pass start_date
+          end_date,   // Pass end_date
+          now, now
+        ]
+      );
+      const newInitiative = await db.get('SELECT * FROM initiatives WHERE id = ?', [result.lastID]);
+      // Parse JSON fields before sending to client
+      newInitiative.selected_factors = JSON.parse(newInitiative.selected_factors || '[]');
+      newInitiative.journal_entries = JSON.parse(newInitiative.journal_entries || '[]');
+      // Also parse old_data and new_data within journal_entries if they exist and are strings
+      newInitiative.journal_entries.forEach(entry => {
+        if (entry.type === 'audit') {
+          try {
+            if (typeof entry.old_data === 'string') {
+              entry.old_data = JSON.parse(entry.old_data);
+            }
+          } catch (e) {
+            console.error("Error parsing old_data in audit entry:", e, entry.old_data);
+            entry.old_data = {}; // Default to empty object on error
+          }
+          try {
+            if (typeof entry.new_data === 'string') {
+              entry.new_data = JSON.parse(entry.new_data);
+            }
+          } catch (e) {
+            console.error("Error parsing new_data in audit entry:", e, entry.new_data);
+            entry.new_data = {}; // Default to empty object on error
+          }
+        }
+      });
       res.status(201).json(newInitiative);
     }
   );
@@ -247,161 +414,205 @@ export async function createApp() {
       }
 
       const { id } = req.params;
-      const {
-        custom_id, name, description, priority, priority_num, status,
-        classification, scope, out_of_scope, selected_factors, journal_entries,
-        start_date, end_date
-      } = req.body;
       const now = new Date().toISOString();
+      const {
+        name, custom_id, description, priority, priority_num, status,
+        classification, scope, out_of_scope, selected_factors, journal_entries,
+        start_date, end_date // Destructure new date fields
+      } = req.body;
 
-      const oldInitiative = await db.get('SELECT * FROM initiatives WHERE id = ?', [id]);
-      if (!oldInitiative) {
-        return res.status(404).json({ message: 'Initiative not found' });
+      console.log('DEBUG (PUT): selected_factors received:', selected_factors);
+
+      let oldInitiative;
+      try {
+        oldInitiative = await db.get('SELECT * FROM initiatives WHERE id = ?', [id]);
+        if (!oldInitiative) {
+          return res.status(404).json({ message: 'Initiative not found' });
+        }
+      } catch (err) {
+        console.error('Error fetching old initiative:', err);
+        return res.status(500).json({ message: 'Database error fetching old initiative' });
       }
 
-      // Calculate computed_hours and shirt_size based on updated selected_factors
-      const { totalHours, shirtSize } = await calculateFactors(db, selected_factors);
+      // Calculate computed_hours and shirt_size from selected_factors
+      let newComputedHours = 0;
+      if (selected_factors && Array.isArray(selected_factors)) {
+        for (const factor of selected_factors) {
+          if (factor.hoursPerResourceType) {
+            const totalFactorHours = Object.values(factor.hoursPerResourceType).reduce((sum, h) => sum + h, 0);
+            newComputedHours += totalFactorHours * (factor.quantity || 1);
+          }
+        }
+      }
+      // Round to one decimal place to avoid floating point inaccuracies
+      newComputedHours = parseFloat(newComputedHours.toFixed(1));
 
-      await db.run(
-        `UPDATE initiatives SET
-          custom_id = ?, name = ?, description = ?, priority = ?, priority_num = ?, status = ?,
-          classification = ?, scope = ?, out_of_scope = ?, selected_factors = ?, journal_entries = ?,
-          computed_hours = ?, shirt_size = ?, start_date = ?, end_date = ?, updated_at = ?
-         WHERE id = ?`,
-        [
-          custom_id || null, name, description || null, priority || 'Low', priority_num || 0, status || 'To Do',
-          classification || 'Internal', scope || null, out_of_scope || null,
-          JSON.stringify(selected_factors || []), // Store as JSON string
-          JSON.stringify(journal_entries || []), // Store as JSON string
-          totalHours, shirtSize,
-          start_date || null, end_date || null,
-          now, id
-        ]
-      );
+      console.log('DEBUG (PUT): Calculated newComputedHours:', newComputedHours);
+
+      const newShirtSize = await getShirtSize(db, newComputedHours);
+      console.log('DEBUG (PUT): Determined newShirtSize:', newShirtSize);
+
+      // Prepare data for update
+      const updateFields = {
+        name, custom_id, description, priority, priority_num, status,
+        classification, scope, out_of_scope,
+        selected_factors: JSON.stringify(selected_factors || []), // Store as JSON string
+        journal_entries: JSON.stringify(journal_entries || []),   // Store as JSON string
+        computed_hours: newComputedHours, // Store as number
+        shirt_size: newShirtSize,
+        start_date: start_date || null, // Include in update fields
+        end_date: end_date || null,     // Include in update fields
+        updated_at: now
+      };
+
+      // Construct the SET clause for the SQL UPDATE statement
+      const setClause = Object.keys(updateFields).map(key => `${key} = ?`).join(', ');
+      const values = Object.values(updateFields);
+      values.push(id); // Add ID for WHERE clause
+
+      try {
+        await db.run(`UPDATE initiatives SET ${setClause} WHERE id = ?`, values);
+      } catch (err) {
+        console.error('Error updating initiative:', err);
+        return res.status(500).json({ message: 'Database error updating initiative' });
+      }
+
+      // --- Audit Trail Logic ---
+      const oldJournalEntries = JSON.parse(oldInitiative.journal_entries || '[]');
+      const newJournalEntries = JSON.parse(JSON.stringify(journal_entries || [])); // Deep copy to avoid mutation
+
+      // Create a snapshot of the old and new initiative data for audit comparison
+      // Ensure selected_factors is the raw JSON string from the database for oldDataForAudit
+      const oldDataForAudit = {
+        name: oldInitiative.name,
+        custom_id: oldInitiative.custom_id,
+        description: oldInitiative.description,
+        priority: oldInitiative.priority,
+        priority_num: oldInitiative.priority_num,
+        status: oldInitiative.status,
+        classification: oldInitiative.classification,
+        scope: oldInitiative.scope,
+        out_of_scope: oldInitiative.out_of_scope,
+        selected_factors: oldInitiative.selected_factors || '[]', // Keep as string for comparison
+        computed_hours: parseFloat(oldInitiative.computed_hours || 0).toFixed(1), // Normalize to string
+        shirt_size: oldInitiative.shirt_size,
+        start_date: oldInitiative.start_date || null, // Include in audit snapshot
+        end_date: oldInitiative.end_date || null      // Include in audit snapshot
+      };
+
+      const newDataForAudit = {
+        name: name,
+        custom_id: custom_id,
+        description: description,
+        priority: priority,
+        priority_num: priority_num,
+        status: status,
+        classification: classification,
+        scope: scope,
+        out_of_scope: out_of_scope,
+        selected_factors: JSON.stringify(selected_factors || []), // Keep as string for comparison
+        computed_hours: newComputedHours.toFixed(1), // Normalize to string
+        shirt_size: newShirtSize,
+        start_date: start_date || null, // Include in audit snapshot
+        end_date: end_date || null      // Include in audit snapshot
+      };
+
+      let changesDetected = false;
+      
+      // Compare fields
+      const keysToCompare = [
+          'name', 'custom_id', 'description', 'priority', 'priority_num',
+          'status', 'classification', 'scope', 'out_of_scope',
+          'computed_hours', 'shirt_size', 'start_date', 'end_date'
+      ];
+
+      for (const key of keysToCompare) {
+          // Special handling for date fields to compare only YYYY-MM-DD part
+          if (key === 'start_date' || key === 'end_date') {
+              const oldDate = (oldDataForAudit[key] || '').substring(0, 10);
+              const newDate = (newDataForAudit[key] || '').substring(0, 10);
+              if (oldDate !== newDate) {
+                  changesDetected = true;
+              }
+          } else {
+              // Compare other fields directly.
+              if (oldDataForAudit[key] !== newDataForAudit[key]) {
+                  changesDetected = true;
+              }
+          }
+      }
+
+      // Compare selected_factors as parsed objects, not raw strings
+      const parsedOldFactors = JSON.parse(oldDataForAudit.selected_factors || '[]');
+      const parsedNewFactors = JSON.parse(newDataForAudit.selected_factors || '[]');
+
+      // Sort them for consistent comparison
+      const sortedOldFactors = [...parsedOldFactors].sort((a, b) => (a?.factorId || '').localeCompare(b?.factorId || ''));
+      const sortedNewFactors = [...parsedNewFactors].sort((a, b) => (a?.factorId || '').localeCompare(b?.factorId || ''));
+
+      if (JSON.stringify(sortedOldFactors) !== JSON.stringify(sortedNewFactors)) {
+          changesDetected = true;
+      }
+
+
+      if (changesDetected) {
+        const auditEntry = {
+          timestamp: now,
+          type: 'audit',
+          action: 'updated',
+          old_data: JSON.stringify(oldDataForAudit), // Store as JSON string
+          new_data: JSON.stringify(newDataForAudit)  // Store as JSON string
+        };
+        newJournalEntries.push(auditEntry); // Add to the new journal entries array
+      }
+
+      // Update the journal_entries in the database again with the new audit entry
+      try {
+        await db.run('UPDATE initiatives SET journal_entries = ? WHERE id = ?', [JSON.stringify(newJournalEntries), id]);
+      } catch (err) {
+        console.error('Error updating journal entries with audit:', err);
+        // This is a critical error, but we should still respond to the client
+        return res.status(500).json({ message: 'Database error updating journal entries with audit' });
+      }
 
       const updatedInitiative = await db.get('SELECT * FROM initiatives WHERE id = ?', [id]);
-
-      // Add audit entry for update
-      const auditEntry = {
-        timestamp: now,
-        type: 'audit',
-        action: 'updated',
-        old_data: { // Store relevant old data for audit
-            name: oldInitiative.name,
-            custom_id: oldInitiative.custom_id,
-            description: oldInitiative.description,
-            priority: oldInitiative.priority,
-            priority_num: oldInitiative.priority_num,
-            status: oldInitiative.status,
-            classification: oldInitiative.classification,
-            scope: oldInitiative.scope,
-            out_of_scope: oldInitiative.out_of_scope,
-            computed_hours: oldInitiative.computed_hours,
-            shirt_size: oldInitiative.shirt_size,
-            start_date: oldInitiative.start_date,
-            end_date: oldInitiative.end_date,
-            selected_factors: oldInitiative.selected_factors // Already stringified
-        },
-        new_data: { // Store relevant new data for audit
-            name: updatedInitiative.name,
-            custom_id: updatedInitiative.custom_id,
-            description: updatedInitiative.description,
-            priority: updatedInitiative.priority,
-            priority_num: updatedInitiative.priority_num,
-            status: updatedInitiative.status,
-            classification: updatedInitiative.classification,
-            scope: updatedInitiative.scope,
-            out_of_scope: updatedInitiative.out_of_scope,
-            computed_hours: updatedInitiative.computed_hours,
-            shirt_size: updatedInitiative.shirt_size,
-            start_date: updatedInitiative.start_date,
-            end_date: updatedInitiative.end_date,
-            selected_factors: updatedInitiative.selected_factors // Already stringified
+      // Parse JSON fields before sending to client
+      updatedInitiative.selected_factors = JSON.parse(updatedInitiative.selected_factors || '[]');
+      updatedInitiative.journal_entries = JSON.parse(updatedInitiative.journal_entries || '[]');
+      // Also parse old_data and new_data within journal_entries if they exist and are strings
+      updatedInitiative.journal_entries.forEach(entry => {
+        if (entry.type === 'audit') {
+          try {
+            if (typeof entry.old_data === 'string') {
+              entry.old_data = JSON.parse(entry.old_data);
+            }
+          } catch (e) {
+            console.error("Error parsing old_data in audit entry:", e, entry.old_data);
+            entry.old_data = {}; // Default to empty object on error
+          }
+          try {
+            if (typeof entry.new_data === 'string') {
+              entry.new_data = JSON.parse(entry.new_data);
+            }
+          } catch (e) {
+            console.error("Error parsing new_data in audit entry:", e, entry.new_data);
+            entry.new_data = {}; // Default to empty object on error
+          }
         }
-      };
-      // Fetch current journal entries, add audit entry, then update
-      let currentJournal = updatedInitiative.journal_entries ? JSON.parse(updatedInitiative.journal_entries) : [];
-      currentJournal.push(auditEntry);
-      await db.run('UPDATE initiatives SET journal_entries = ? WHERE id = ?', [JSON.stringify(currentJournal), updatedInitiative.id]);
-
-
-      // Parse JSON fields before sending response
-      updatedInitiative.selected_factors = JSON.parse(updatedInitiative.selected_factors);
-      updatedInitiative.journal_entries = JSON.parse(JSON.stringify(currentJournal)); // Re-parse for consistency
+      });
       res.json(updatedInitiative);
     }
   );
 
   app.delete('/api/initiatives/:id', async (req, res) => {
     const { id } = req.params;
-    await db.run('DELETE FROM initiatives WHERE id = ?', [id]);
-    res.status(204).send();
-  });
-
-  // New endpoint for importing initiatives
-  app.post('/api/initiatives/import', async (req, res) => {
-    const initiativesToImport = req.body;
-    let importedCount = 0;
-    const now = new Date().toISOString();
-
-    for (const init of initiativesToImport) {
-        // Calculate computed_hours and shirt_size for imported initiatives
-        const { totalHours, shirtSize } = await calculateFactors(db, init.selected_factors);
-
-        try {
-            const result = await db.run(
-                `INSERT INTO initiatives (custom_id, name, description, priority, priority_num, status,
-                  classification, scope, out_of_scope, selected_factors, journal_entries,
-                  computed_hours, shirt_size, start_date, end_date, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                  init.custom_id || null, init.name, init.description || null, init.priority || 'Low', init.priority_num || 0, init.status || 'To Do',
-                  init.classification || 'Imported', init.scope || null, init.out_of_scope || null,
-                  JSON.stringify(init.selected_factors || []), // Store as JSON string
-                  JSON.stringify(init.journal_entries || []), // Store as JSON string
-                  totalHours, shirtSize,
-                  init.start_date || null, init.end_date || null,
-                  now, now
-                ]
-            );
-            importedCount++;
-
-            // Add audit entry for imported initiative
-            const newInitiative = await db.get('SELECT * FROM initiatives WHERE id = ?', [result.lastID]);
-            const auditEntry = {
-                timestamp: now,
-                type: 'audit',
-                action: 'created',
-                new_data: {
-                    name: newInitiative.name,
-                    custom_id: newInitiative.custom_id,
-                    computed_hours: newInitiative.computed_hours,
-                    shirt_size: newInitiative.shirt_size,
-                    selected_factors: newInitiative.selected_factors
-                }
-            };
-            let currentJournal = newInitiative.journal_entries ? JSON.parse(newInitiative.journal_entries) : [];
-            currentJournal.push(auditEntry);
-            await db.run('UPDATE initiatives SET journal_entries = ? WHERE id = ?', [JSON.stringify(currentJournal), newInitiative.id]);
-
-        } catch (error) {
-            console.error('Error importing initiative:', init.name, error);
-            // Continue to next initiative even if one fails
-        }
+    try {
+      await db.run('DELETE FROM initiatives WHERE id = ?', [id]);
+      res.status(204).send();
+    } catch (err) {
+      console.error('Error deleting initiative:', err);
+      res.status(500).json({ message: 'Database error deleting initiative' });
     }
-    res.status(200).json({ message: 'Import complete', importedCount });
-});
-
-
-  // Endpoint to get audit trail for a specific initiative
-  app.get('/api/initiatives/:id/audit', async (req, res) => {
-    const { id } = req.params;
-    const initiative = await db.get('SELECT journal_entries FROM initiatives WHERE id = ?', [id]);
-    if (!initiative) {
-      return res.status(404).json({ message: 'Initiative not found' });
-    }
-    const journalEntries = initiative.journal_entries ? JSON.parse(initiative.journal_entries) : [];
-    res.json(journalEntries);
   });
 
 
@@ -419,9 +630,14 @@ export async function createApp() {
         return res.status(400).json({ errors: errors.array() });
       }
       const { name, description } = req.body;
-      const id = uuid();
-      await db.run('INSERT INTO resource_types (id, name, description) VALUES (?, ?, ?)', [id, name, description || null]);
-      res.status(201).json({ id, name, description });
+      try {
+        await db.run('INSERT INTO resource_types (id, name, description) VALUES (?, ?, ?)', [uuid(), name, description]);
+        const newRT = await db.get('SELECT * FROM resource_types WHERE name = ?', [name]);
+        res.status(201).json(newRT);
+      } catch (err) {
+        console.error('Error adding resource type:', err);
+        res.status(500).json({ message: 'Database error adding resource type' });
+      }
     }
   );
 
@@ -434,27 +650,89 @@ export async function createApp() {
       }
       const { id } = req.params;
       const { name, description } = req.body;
-      await db.run('UPDATE resource_types SET name = ?, description = ? WHERE id = ?', [name, description || null, id]);
-      res.json({ id, name, description });
+      try {
+        await db.run('UPDATE resource_types SET name = ?, description = ? WHERE id = ?', [name, description, id]);
+        const updatedRT = await db.get('SELECT * FROM resource_types WHERE id = ?', [id]);
+        res.json(updatedRT);
+      } catch (err) {
+        console.error('Error updating resource type:', err);
+        res.status(500).json({ message: 'Database error updating resource type' });
+      }
     }
   );
 
   app.delete('/api/resource-types/:id', async (req, res) => {
     const { id } = req.params;
-    // TODO: Add cascade delete or validation for associated estimation factors
-    await db.run('DELETE FROM resource_types WHERE id = ?', [id]);
-    res.status(204).send();
+    try {
+      await db.run('DELETE FROM resource_types WHERE id = ?', [id]);
+      res.status(204).send();
+    } catch (err) {
+      console.error('Error deleting resource type:', err);
+      res.status(500).json({ message: 'Database error deleting resource type' });
+    }
   });
 
   // Routes for Estimation Factors
   app.get('/api/estimation-factors', async (req, res) => {
-    const factors = await db.all('SELECT * FROM estimation_factors');
-    // Parse hoursPerResourceType JSON string before sending
-    const parsedFactors = factors.map(f => ({
-      ...f,
-      hoursPerResourceType: f.hoursPerResourceType ? JSON.parse(f.hoursPerResourceType) : {}
-    }));
-    res.json(parsedFactors);
+    const rows = await db.all('SELECT * FROM estimation_factors');
+    rows.forEach(row => {
+      row.hoursPerResourceType = JSON.parse(row.hours_per_resource_type || '{}');
+      row.journal_entries = JSON.parse(row.journal_entries || '[]'); // Parse journal entries
+      // This is the crucial part for the nested audit data
+      row.journal_entries.forEach(entry => {
+        if (entry.type === 'audit') {
+          try {
+            if (typeof entry.old_data === 'string') {
+              entry.old_data = JSON.parse(entry.old_data);
+            }
+          } catch (e) {
+            console.error("Error parsing old_data in EF audit entry (GET /):", e, entry.old_data);
+            entry.old_data = {};
+          }
+          try {
+            if (typeof entry.new_data === 'string') {
+              entry.new_data = JSON.parse(entry.new_data);
+            }
+          } catch (e) {
+            console.error("Error parsing new_data in EF audit entry (GET /):", e, entry.new_data);
+            entry.new_data = {};
+          }
+        }
+      });
+      delete row.hours_per_resource_type; // Clean up internal field
+    });
+    res.json(rows);
+  });
+
+  app.get('/api/estimation-factors/:id/audit', async (req, res) => {
+    const { id } = req.params;
+    const row = await db.get('SELECT journal_entries FROM estimation_factors WHERE id = ?', [id]);
+    if (!row) {
+      return res.status(404).json({ message: 'Estimation Factor not found' });
+    }
+    const journalEntries = JSON.parse(row.journal_entries || '[]');
+    // Parse old_data and new_data within journal_entries if they exist and are strings
+    journalEntries.forEach(entry => {
+      if (entry.type === 'audit') {
+        try {
+          if (typeof entry.old_data === 'string') {
+            entry.old_data = JSON.parse(entry.old_data);
+          }
+        } catch (e) {
+          console.error("Error parsing old_data in EF audit entry (GET /:id/audit):", e, entry.old_data);
+          entry.old_data = {};
+        }
+        try {
+          if (typeof entry.new_data === 'string') {
+            entry.new_data = JSON.parse(entry.new_data);
+            }
+          } catch (e) {
+            console.error("Error parsing new_data in EF audit entry (GET /:id/audit):", e, entry.new_data);
+            entry.new_data = {};
+          }
+        }
+      });
+    res.json(journalEntries);
   });
 
   app.post('/api/estimation-factors',
@@ -464,10 +742,42 @@ export async function createApp() {
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
       }
-      const { name, hoursPerResourceType } = req.body;
-      const id = uuid();
-      await db.run('INSERT INTO estimation_factors (id, name, hoursPerResourceType) VALUES (?, ?, ?)', [id, name, JSON.stringify(hoursPerResourceType || {})]);
-      res.status(201).json({ id, name, hoursPerResourceType });
+      const now = new Date().toISOString();
+      const { name, description, hoursPerResourceType, journal_entries } = req.body;
+
+      const newJournalEntries = JSON.parse(JSON.stringify(journal_entries || [])); // Deep copy
+
+      // Prepare new data for audit snapshot
+      const newDataForAudit = {
+        name,
+        description,
+        hoursPerResourceType: hoursPerResourceType || {},
+      };
+
+      // Add audit entry for creation
+      const auditEntry = {
+        timestamp: now,
+        type: 'audit',
+        action: 'created',
+        old_data: JSON.stringify({}), // Store empty object as JSON string
+        new_data: JSON.stringify(newDataForAudit) // Store new data as JSON string
+      };
+      newJournalEntries.push(auditEntry);
+
+      try {
+        await db.run(
+          'INSERT INTO estimation_factors (id, name, description, hours_per_resource_type, journal_entries, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [uuid(), name, description, JSON.stringify(hoursPerResourceType || {}), JSON.stringify(newJournalEntries), now, now]
+        );
+        const newEF = await db.get('SELECT * FROM estimation_factors WHERE name = ?', [name]);
+        newEF.hoursPerResourceType = JSON.parse(newEF.hours_per_resource_type || '{}');
+        newEF.journal_entries = JSON.parse(newEF.journal_entries || '[]'); // Parse journal entries
+        delete newEF.hours_per_resource_type;
+        res.status(201).json(newEF);
+      } catch (err) {
+        console.error('Error adding estimation factor:', err);
+        res.status(500).json({ message: 'Database error adding estimation factor' });
+      }
     }
   );
 
@@ -479,16 +789,106 @@ export async function createApp() {
         return res.status(400).json({ errors: errors.array() });
       }
       const { id } = req.params;
-      const { name, hoursPerResourceType } = req.body;
-      await db.run('UPDATE estimation_factors SET name = ?, hoursPerResourceType = ? WHERE id = ?', [name, JSON.stringify(hoursPerResourceType || {}), id]);
-      res.json({ id, name, hoursPerResourceType });
+      const now = new Date().toISOString();
+      const { name, description, hoursPerResourceType, journal_entries } = req.body;
+
+      let oldEstimationFactor;
+      try {
+        oldEstimationFactor = await db.get('SELECT * FROM estimation_factors WHERE id = ?', [id]);
+        if (!oldEstimationFactor) {
+          return res.status(404).json({ message: 'Estimation Factor not found' });
+        }
+      } catch (err) {
+        console.error('Error fetching old estimation factor:', err);
+        return res.status(500).json({ message: 'Database error fetching old estimation factor' });
+      }
+
+      // Prepare data for update
+      const updateFields = {
+        name,
+        description,
+        hours_per_resource_type: JSON.stringify(hoursPerResourceType || {}),
+        journal_entries: JSON.stringify(journal_entries || []),
+        updated_at: now
+      };
+
+      const setClause = Object.keys(updateFields).map(key => `${key} = ?`).join(', ');
+      const values = Object.values(updateFields);
+      values.push(id);
+
+      try {
+        await db.run(`UPDATE estimation_factors SET ${setClause} WHERE id = ?`, values);
+      } catch (err) {
+        console.error('Error updating estimation factor:', err);
+        return res.status(500).json({ message: 'Database error updating estimation factor' });
+      }
+
+      // --- Audit Trail Logic for Estimation Factors ---
+      const oldJournalEntries = JSON.parse(oldEstimationFactor.journal_entries || '[]');
+      const newJournalEntries = JSON.parse(JSON.stringify(journal_entries || [])); // Deep copy
+
+      const oldDataForAudit = {
+        name: oldEstimationFactor.name,
+        description: oldEstimationFactor.description,
+        hoursPerResourceType: JSON.parse(oldEstimationFactor.hours_per_resource_type || '{}'),
+      };
+
+      const newDataForAudit = {
+        name: name,
+        description: description,
+        hoursPerResourceType: hoursPerResourceType || {},
+      };
+
+      let changesDetected = false;
+      const efKeysToCompare = ['name', 'description'];
+      for (const key of efKeysToCompare) {
+        if (oldDataForAudit[key] !== newDataForAudit[key]) {
+          changesDetected = true;
+          break;
+        }
+      }
+
+      // Use the new helper for hoursPerResourceType comparison
+      if (!areHoursPerResourceTypeEqual(oldDataForAudit.hoursPerResourceType, newDataForAudit.hoursPerResourceType)) {
+        changesDetected = true;
+      }
+
+      if (changesDetected) {
+        const auditEntry = {
+          timestamp: now,
+          type: 'audit',
+          action: 'updated',
+          old_data: JSON.stringify(oldDataForAudit),
+          new_data: JSON.stringify(newDataForAudit)
+        };
+        newJournalEntries.push(auditEntry);
+      }
+
+      // Update the journal_entries in the database again with the new audit entry
+      try {
+        await db.run('UPDATE estimation_factors SET journal_entries = ? WHERE id = ?', [JSON.stringify(newJournalEntries), id]);
+      } catch (err) {
+        console.error('Error updating EF journal entries with audit:', err);
+        return res.status(500).json({ message: 'Database error updating EF journal entries with audit' });
+      }
+
+      const updatedEF = await db.get('SELECT * FROM estimation_factors WHERE id = ?', [id]);
+      updatedEF.hoursPerResourceType = JSON.parse(updatedEF.hours_per_resource_type || '{}');
+      updatedEF.journal_entries = JSON.parse(updatedEF.journal_entries || '[]');
+      delete updatedEF.hours_per_resource_type;
+      res.json(updatedEF);
     }
   );
 
   app.delete('/api/estimation-factors/:id', async (req, res) => {
     const { id } = req.params;
-    await db.run('DELETE FROM estimation_factors WHERE id = ?', [id]);
-    res.status(204).send();
+    try {
+      await db.run('DELETE FROM estimation_factors WHERE id = ?', [id]);
+      res.status(204).send();
+    } catch (err) {
+      console.error('Error deleting estimation factor:', err);
+      res.status(500).json({ message: 'Database error deleting estimation factor' });
+    }
   });
 
   // Routes for Shirt Sizes
@@ -532,7 +932,7 @@ if (import.meta.main) {
     .then(app => {
       const port = process.env.PORT || 3000;
       app.listen(port, () => {
-        console.log(`Estiim API listening at http://localhost:${port}`);
+        console.log(`Estiim API listening on port ${port}`);
       });
     })
     .catch(err => {

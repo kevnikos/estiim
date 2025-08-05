@@ -3,16 +3,18 @@
 <head>
 <meta charset="UTF-8" />
 <title>Estiim – T-Shirt Estimator</title>
-<!-- Removed Lucide CDN script -->
+<!-- Lucide CDN script re-added for SVG icons -->
+<script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;display=swap');
-:root { --bg:#f3f4f6; --card:#fff; --border:#e5e7eb; --primary:#2ecc71; --primary-dark:#27ae60; --text:#111827; --overlay:rgba(0,0,0,0.4); --orange:#f97316; --orange-dark:#ea580c; --red:#ef4444; --green:#22c55e; }
+:root { --bg:#f3f4f6; --card:#fff; --border:#e5e7eb; --primary:#2ecc71; --primary-dark:#27ae60; --text:#111827; --overlay:rgba(0,0,0,0.4); --orange:#f97316; --orange-dark:#ea580c; --red:#ef4444; --green:#22c55e; --blue: #007bff; --blue-dark: #0056b3;} /* Added blue colors */
+/* Added scroll-padding-top to account for sticky header */
+html, body { scroll-behavior: smooth; scroll-padding-top: 60px; /* Adjust this value if header height changes */ }
 * { box-sizing:border-box; font-family:Inter,Arial,sans-serif; }
 body { margin:0; background:var(--bg); color:var(--text); }
-header { background:var(--primary); color:#fff; padding:12px 24px; display:flex; justify-content:space-between; align-items:center; }
-header h1 { margin:0; font-size:22px; font-weight:600; }
-nav a { color:#fff; margin-left:16px; text-decoration:none; font-weight:500; }
-nav a:hover { opacity:.85; }
+header { background:var(--primary); color:#fff; padding:12px 24px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:1001; /* Ensure header is above flyout */ }
+header h1 { margin:0; font-size:22px; font-weight:600; cursor:pointer; }
+/* Removed nav a styles */
 section { display:none; padding:24px 10vw; }
 section.active { display:block; }
 .card { background:var(--card); padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,.05); margin-bottom:24px; }
@@ -63,6 +65,14 @@ input[type=number] { width:90px; }
 .import-button:hover {
     background-color: var(--orange-dark); /* Darker orange on hover */
 }
+/* New style for duplicate button */
+.dup-button {
+    background-color: var(--blue);
+    color: white;
+}
+.dup-button:hover {
+    background-color: var(--blue-dark);
+}
 footer {
     position: fixed;
     bottom: 0;
@@ -97,6 +107,29 @@ footer {
     gap: 10px; /* Space between checkbox/label and quantity */
     margin-bottom: 8px;
     padding: 5px 0;
+    border: 1px solid var(--border); /* Added border for clarity */
+    border-radius: 66px; /* Increased border-radius for more rounded corners */
+    padding: 10px;
+    background-color: var(--card);
+    box-shadow: 0 1px 2px rgba(0,0,0,.03);
+    flex-wrap: wrap; /* Allow content to wrap */
+}
+
+.factor-item-content {
+    flex-grow: 1; /* Allows content to take available space */
+    display: flex;
+    flex-direction: column; /* Stack name and resources vertically */
+}
+
+.factor-name {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px; /* Space between name and resources */
+}
+
+.factor-resources {
+    font-size: 0.85em;
+    color: #555;
 }
 
 /* Custom checkbox styling */
@@ -108,6 +141,7 @@ footer {
     padding-left: 25px; /* Space for the custom box */
     user-select: none;
     min-height: 18px; /* Ensure enough height for the label text */
+    margin-right: 10px; /* Space between checkbox and factor content */
 }
 
 .custom-checkbox input[type="checkbox"] {
@@ -146,10 +180,6 @@ footer {
 }
 
 .custom-checkbox input:checked ~ .checkmark:after {
-    display: block;
-}
-
-.custom-checkbox .checkmark:after {
     left: 6px;
     top: 2px;
     width: 5px;
@@ -316,22 +346,219 @@ footer {
     color: var(--red);
 }
 
+/* Styles for scrollable factor picker and search */
+#factor-picker-container {
+    max-height: 300px; /* Cap at roughly 6 items + padding */
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    background-color: #f9fafb;
+    margin-top: 12px;
+}
+
+#factor-search-input {
+    width: 100%;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+/* Flyout menu styles */
+.flyout-menu-container {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%; /* Occupy full height of the header */
+    display: flex;
+    align-items: center;
+    padding-right: 24px; /* Match header padding */
+}
+
+.gear-icon {
+    cursor: pointer;
+    width: 28px; /* Slightly larger icon */
+    height: 28px;
+    color: #fff;
+    transition: transform 0.3s ease-in-out; /* Re-added transition for SVG */
+    transform-origin: center center; /* Ensure rotation around center */
+}
+
+.gear-icon:hover {
+    transform: rotate(90deg); /* Re-added rotation for SVG */
+}
+
+.flyout-menu {
+    position: fixed; /* Fixed position relative to viewport */
+    top: 0;
+    right: 0;
+    width: 250px; /* Width of the flyout menu */
+    height: 100%;
+    background-color: var(--primary-dark); /* Darker background for distinction */
+    box-shadow: -4px 0 8px rgba(0,0,0,0.2);
+    transform: translateX(100%); /* Start off-screen to the right */
+    transition: transform 0.3s ease-in-out;
+    padding-top: 60px; /* Space for header */
+    z-index: 1000; /* Below header, above content */
+    display: flex;
+    flex-direction: column;
+}
+
+.flyout-menu.active {
+    transform: translateX(0); /* Slide into view */
+}
+
+.flyout-menu a {
+    color: #fff;
+    padding: 15px 24px;
+    text-decoration: none;
+    font-weight: 500;
+    border-bottom: 1px solid rgba(255,255,255,0.1); /* Subtle separator */
+    transition: background-color 0.2s;
+}
+
+.flyout-menu a:hover {
+    background-color: rgba(0,0,0,0.1); /* Slight hover effect */
+}
+
+.flyout-menu .close-btn {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-size: 24px;
+    color: #fff;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+}
+
+/* Styles for scrollable estimation factors table and its search */
+#ef-table-container {
+    max-height: 225px; /* 5 items * ~45px height per row */
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    background-color: #f9fafb;
+}
+
+#ef-search-input {
+    flex-grow: 1; /* Allow it to take available space */
+    margin-right: 12px; /* Space between search and add button */
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+/* Styles for Initiatives table container */
+#init-table-container {
+    max-height: 360px; /* 8 items * ~45px height per row */
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    background-color: #f9fafb;
+}
+
+/* Styles for Resource Types table container */
+#rt-table-container {
+    max-height: 225px; /* 5 items * ~45px height per row */
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    background-color: #f9fafb;
+}
+
+/* Styles for search inputs on main pages */
+.main-page-search-input {
+    flex-grow: 1; /* Allow it to take available space */
+    margin-right: 12px; /* Space between search and add button */
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+}
+
 </style>
 </head>
 <body>
-<header>
-  <h1>Estiim</h1>
-  <nav>
-    <a href="#home">Initiatives</a>
-    <a href="#factors">Estimation Factors</a>
-    <a href="#shirt-sizes">Shirt Sizes</a>
-  </nav>
+<header id="main-header">
+  <h1 onclick="window.location.href = '/'">Estiim</h1>
+  <div class="flyout-menu-container">
+    <!-- Double Gear Icon SVG from provided code -->
+    <svg class="gear-icon" onclick="window.toggleFlyoutMenu()" height="28px" width="28px" version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+	 viewBox="0 0 512 512" xml:space="preserve">
+        <style type="text/css">
+            .st0{fill:#FFFFFF;} /* Changed fill to white */
+        </style>
+        <g>
+            <path class="st0" d="M336.896,269.874c-18.795,0-36.449,7.308-49.698,20.575c-13.276,13.267-20.593,30.912-20.593,49.698
+                c0,18.768,7.307,36.422,20.593,49.707c13.276,13.267,30.921,20.574,49.698,20.574c18.769,0,36.422-7.307,49.698-20.574
+                c13.276-13.286,20.584-30.939,20.584-49.707c0-18.778-7.307-36.43-20.574-49.689C373.336,277.182,355.682,269.874,336.896,269.874z
+                M378.1,381.35c-11.011,11.003-25.636,17.061-41.204,17.061c-15.559,0-30.202-6.058-41.204-17.061
+                c-11.011-11.002-17.07-25.635-17.07-41.203c0-15.568,6.058-30.202,17.07-41.195c11.002-11.011,25.645-17.069,41.204-17.069
+                c15.568,0,30.193,6.058,41.204,17.069c11.002,10.993,17.06,25.627,17.06,41.195C395.161,355.715,389.102,370.348,378.1,381.35z"/>
+            <path class="st0" d="M499.041,317.118l-37.455-5.428c-2.346-0.18-4.368-1.654-5.277-3.838l-12.134-29.294
+                c-0.908-2.175-0.531-4.656,1.006-6.436l22.4-30.103c3.569-4.18,3.335-10.392-0.556-14.274l-17.726-17.726
+                c-2.04-2.05-4.736-3.083-7.433-3.083c-2.427,0-4.863,0.836-6.832,2.526l-30.112,22.409c-1.141,0.98-2.588,1.492-4.044,1.492
+                c-0.809,0-1.618-0.162-2.382-0.476l-29.312-12.153c-2.166-0.89-3.65-2.94-3.838-5.268l-5.438-37.455
+                c-0.422-5.484-4.989-9.708-10.472-9.708h-25.078c-5.492,0-10.059,4.224-10.481,9.708l-5.447,37.455
+                c-0.179,2.328-1.654,4.378-3.829,5.276l-29.312,12.144c-0.773,0.314-1.582,0.476-2.39,0.476c-1.456,0-2.895-0.512-4.045-1.492
+                l-30.094-22.4c-1.969-1.69-4.404-2.535-6.822-2.535c-2.706,0-5.402,1.043-7.452,3.092l-17.726,17.717
+                c-3.883,3.892-4.116,10.094-0.557,14.274l22.4,30.103c1.519,1.779,1.914,4.26,1.016,6.436l-12.144,29.303
+                c-0.881,2.175-2.931,3.65-5.258,3.829l-37.474,5.438c-5.464,0.432-9.689,4.998-9.689,10.49v25.06
+                c0,5.502,4.225,10.068,9.689,10.498l37.474,5.43c2.328,0.189,4.378,1.672,5.258,3.838l12.144,29.311
+                c0.907,2.158,0.503,4.656-1.016,6.436l-22.4,30.103c-3.559,4.161-3.326,10.382,0.557,14.265l17.726,17.726
+                c2.05,2.049,4.746,3.082,7.443,3.082c2.427,0,4.863-0.836,6.832-2.526l30.094-22.409c1.15-0.98,2.589-1.483,4.045-1.483
+                c0.809,0,1.617,0.152,2.39,0.476L304.6,459.57c2.175,0.899,3.659,2.93,3.838,5.276l5.438,37.456
+                c0.422,5.464,4.989,9.698,10.481,9.698h25.078c5.492,0,10.049-4.234,10.481-9.698l5.429-37.456
+                c0.189-2.345,1.672-4.376,3.838-5.276l29.312-12.144c0.773-0.324,1.581-0.476,2.39-0.476c1.456,0,2.904,0.503,4.045,1.483
+                l30.103,22.409c1.969,1.69,4.404,2.526,6.832,2.526c2.697,0,5.393-1.034,7.433-3.082l17.726-17.726
+                c3.9-3.883,4.125-10.104,0.556-14.265l-22.4-30.103c-1.509-1.78-1.914-4.279-1.006-6.436l12.134-29.311
+                c0.909-2.167,2.931-3.65,5.277-3.838l37.455-5.43c5.474-0.431,9.699-4.997,9.699-10.48v-25.078
+                C508.74,322.125,504.515,317.559,499.041,317.118z M496.722,351.364l-36.574,5.304c-6.643,0.71-12.324,4.944-14.939,11.182
+                l-12.126,29.266c-2.598,6.22-1.582,13.25,2.633,18.481l21.879,29.402l-15.856,15.855l-29.392-21.878
+                c-3.236-2.616-7.29-4.054-11.461-4.054c-2.436,0-4.808,0.485-6.984,1.402l-29.339,12.152c-6.211,2.589-10.444,8.278-11.155,14.93
+                l-5.302,36.574h-22.418l-5.312-36.565c-0.701-6.652-4.926-12.35-11.173-14.957l-29.276-12.117c-2.238-0.944-4.602-1.42-7.028-1.42
+                c-4.153,0-8.198,1.438-11.443,4.044l-29.411,21.887l-15.847-15.855l21.87-29.402c4.224-5.232,5.24-12.27,2.652-18.446
+                l-12.117-29.248c-2.553-6.256-8.252-10.517-14.94-11.236l-36.592-5.304v-22.436l36.575-5.303
+                c6.714-0.701,12.422-4.98,14.929-11.164l12.126-29.267c2.606-6.22,1.591-13.258-2.633-18.48l-21.879-29.411l15.865-15.856
+                l29.383,21.878c3.245,2.624,7.29,4.054,11.461,4.054c2.409,0,4.763-0.468,6.992-1.393l29.303-12.144
+                c6.23-2.571,10.481-8.278,11.173-14.948l5.321-36.566h22.418l5.302,36.584c0.72,6.669,4.972,12.369,11.173,14.921l29.312,12.153
+                c2.22,0.916,4.575,1.393,6.984,1.393c4.18,0,8.234-1.438,11.47-4.054l29.392-21.878l15.856,15.856l-21.86,29.375
+                c-4.243,5.214-5.268,12.26-2.661,18.471l12.135,29.312c2.588,6.22,8.288,10.462,14.948,11.164l36.565,5.303V351.364z"/>
+            <path class="st0" d="M186.04,154.802c6.499-13.987,7.173-29.663,1.888-44.135c-5.294-14.48-15.891-26.04-29.842-32.521
+                c-7.792-3.64-16.062-5.465-24.575-5.429c-6.651,0.027-13.231,1.213-19.559,3.524c-14.498,5.285-26.057,15.883-32.556,29.86
+                c-6.499,13.96-7.173,29.626-1.897,44.134c5.304,14.49,15.911,26.049,29.861,32.53c7.784,3.622,16.053,5.455,24.565,5.42
+                c6.661-0.036,13.241-1.222,19.578-3.524C167.965,179.377,179.515,168.77,186.04,154.802z M149.376,173.372
+                c-5.042,1.843-10.282,2.769-15.505,2.787c-6.634,0.036-13.25-1.403-19.442-4.288c-11.065-5.151-19.442-14.302-23.64-25.762
+                c-4.17-11.478-3.65-23.882,1.501-34.939c5.151-11.074,14.31-19.469,25.77-23.639c5.051-1.852,10.292-2.778,15.506-2.796
+                c6.634-0.028,13.24,1.411,19.433,4.297c11.056,5.15,19.451,14.301,23.64,25.761c4.18,11.47,3.648,23.865-1.493,34.939
+                C169.978,160.797,160.837,169.184,149.376,173.372z"/>
+        </g>
+    </svg>
+  </div>
 </header>
+
+<!-- Flyout Menu -->
+<div id="flyout-menu" class="flyout-menu">
+    <button class="close-btn" onclick="window.toggleFlyoutMenu()">×</button>
+    <a href="#home" onclick="window.show('#home')">Home</a>
+    <a href="#factors" onclick="window.show('#factors')">Estimation Factors</a>
+    <a href="#shirt-sizes" onclick="window.show('#shirt-sizes')">Shirt Sizes</a>
+    <a href="#prefs" onclick="window.show('#prefs')">Prefs</a>
+</div>
 
 <section id="home" class="active">
   <div class="card flex" style="justify-content:space-between;align-items:center;">
     <h2>Initiatives</h2>
     <div class="flex">
+        <!-- New search input for the main initiatives page -->
+        <input type="text" id="init-search-input" class="main-page-search-input" placeholder="Search initiatives..." oninput="window.loadInitiatives(currentSortColumn, currentSortDirection)">
         <button onclick="window.addInitiative()">+ Add Initiative</button>
         <button class="export-button" onclick="window.exportInitiatives()">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> Export
@@ -345,7 +572,7 @@ footer {
         <input type="file" id="importFileInput" accept=".tsv" style="display: none;" onchange="window.handleImportFile(event)">
     </div>
   </div>
-  <div class="card">
+  <div id="init-table-container" class="card">
     <table id="init-table">
         <thead>
             <tr>
@@ -371,19 +598,24 @@ footer {
   <div class="card">
     <div class="flex" style="justify-content:space-between;align-items:center;">
         <h2>Resource Types</h2>
-        <button onclick="window.openModal('rt')">+ Add Resource Type</button>
+        <!-- New search input for the main resource types page -->
+        <input type="text" id="rt-search-input" class="main-page-search-input" placeholder="Search resource types..." oninput="window.loadRT()">
+        <button onclick="window.openAddResourceTypeModal()">+ Add Resource Type</button>
     </div>
-    <div class="card">
+    <div id="rt-table-container" class="card">
         <table id="rt-table"><thead><tr><th>Name</th><th>Description</th><th></th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
   <div class="card" style="margin-top: 24px;">
-    <div class="flex" style="justify-content:space-between;align-items:center;">
+    <div class="flex" style="justify-content:space-between;align-items:center; margin-bottom: 12px;">
         <h2>Estimation Factors</h2>
+        <!-- Existing search input for the main factors page -->
+        <input type="text" id="ef-search-input" class="main-page-search-input" placeholder="Search factors..." oninput="window.loadEF()">
         <button onclick="window.addEstimationFactor()">+ Add Estimation Factor</button>
     </div>
-    <div class="card">
+    <!-- Existing container for scrollable estimation factors table -->
+    <div id="ef-table-container" class="card">
         <table id="ef-table"><thead><tr><th>Name</th><th>Resources</th><th>Days</th><th>Hours</th><th></th></tr></thead><tbody></tbody></table>
     </div>
   </div>
@@ -399,6 +631,33 @@ footer {
         <table id="shirt-size-table"><thead><tr><th>Size</th><th>Hours</th><th>Days</th><th>Months</th></tr></thead><tbody></tbody></table>
     </div>
 </section>
+
+<!-- New Prefs Section -->
+<section id="prefs">
+    <div class="card flex" style="justify-content:space-between;align-items:center;">
+        <h2>Preferences</h2>
+        <div>
+            <button onclick="window.savePreferences()">Save</button>
+            <button onclick="window.populatePrefsPage()" style="background:var(--border);color:var(--text)">Cancel</button>
+        </div>
+    </div>
+    <div class="card">
+        <p>Configure display limits for lists:</p>
+        <div style="margin-bottom: 12px;">
+            <label for="pref-max-initiatives" style="display: inline-block; width: 180px;">Max Visible Initiatives:</label>
+            <input type="number" id="pref-max-initiatives" min="1" value="8">
+        </div>
+        <div style="margin-bottom: 12px;">
+            <label for="pref-max-resource-types" style="display: inline-block; width: 180px;">Max Visible Resource Types:</label>
+            <input type="number" id="pref-max-resource-types" min="1" value="5">
+        </div>
+        <div>
+            <label for="pref-max-estimation-factors" style="display: inline-block; width: 180px;">Max Visible Estimation Factors:</label>
+            <input type="number" id="pref-max-estimation-factors" min="1" value="5">
+        </div>
+    </div>
+</section>
+
 
 <!-- Modals -->
 <div id="modal-init" class="modal-overlay"><div class="modal">
@@ -438,7 +697,11 @@ footer {
         </div>
     </div>
 
-    <div class="flex" style="justify-content:flex-end;margin-top:16px"><button onclick="window.saveInitiative()">Save</button><button onclick="window.closeModal('init')" style="background:var(--border);color:var(--text)">Cancel</button></div>
+    <div class="flex" style="justify-content:flex-end;margin-top:16px">
+        <button class="dup-button" onclick="window.duplicateInitiative()">Dup</button> <!-- New Dup button -->
+        <button onclick="window.saveInitiative()">Save</button>
+        <button onclick="window.closeModal('init')" style="background:var(--border);color:var(--text)">Cancel</button>
+    </div>
 </div></div>
 
 <div id="modal-rt" class="modal-overlay"><div class="modal">
@@ -454,9 +717,30 @@ footer {
     <button class="close" onclick="window.closeModal('ef')">×</button>
     <h2>Add / Edit Estimation Factor</h2>
     <input id="ef-id" type="hidden">
-    <input id="ef-name" placeholder="Name" style="width:100%;margin-top:12px">
-    <div id="ef-hours" style="margin-top:12px"></div>
-    <div style="text-align:right;margin-top:16px"><button onclick="window.saveEstimationFactor()">Save</button><button onclick="window.closeModal('ef')" style="background:var(--border);color:var(--text)">Cancel</button></div>
+    
+    <div class="modal-content-flex">
+        <div class="initiative-details-left"> <!-- Reusing class for layout -->
+            <input id="ef-name" placeholder="Name" style="width:100%;margin-top:12px">
+            <textarea id="ef-description" placeholder="Description" style="width:100%;margin-top:12px"></textarea> <!-- New description field -->
+            <div id="ef-hours" style="margin-top:12px"></div>
+        </div>
+        <div class="initiative-journal-right"> <!-- Reusing class for layout -->
+            <div class="flex" style="margin-bottom:12px;">
+                <div style="flex:1;"><label><b>Created</b></label><br><span id="ef-created"></span></div>
+                <div style="flex:1;"><label><b>Updated</b></label><br><span id="ef-updated"></span></div>
+            </div>
+            <h3>Journal</h3>
+            <div id="ef-journal-log" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border); padding: 10px; border-radius: 6px; background: #f9fafb; flex-grow: 1;"></div>
+            <textarea id="ef-journal-comment-input" placeholder="Add a new comment..." style="width:100%; margin-top:10px; min-height: 60px;"></textarea>
+            <button onclick="window.addJournalCommentEF()" style="margin-top:8px;">Add Comment</button>
+        </div>
+    </div>
+
+    <div class="flex" style="justify-content:flex-end;margin-top:16px">
+        <button class="dup-button" onclick="window.duplicateEstimationFactor()">Dup</button> <!-- New Dup button -->
+        <button onclick="window.saveEstimationFactor()">Save</button>
+        <button onclick="window.closeModal('ef')" style="background:var(--border);color:var(--text)">Cancel</button>
+    </div>
 </div></div>
 
 <div id="modal-factors" class="modal-overlay"><div class="modal">
@@ -468,7 +752,11 @@ footer {
       <div id="factor-size">Size: XS</div>
     </div>
     <h2 style="padding-right: 120px;">T-Shirt Factors</h2>
-    <div id="factor-picker"></div>
+    <!-- New search input -->
+    <input type="text" id="factor-search-input" placeholder="Search factors..." oninput="window.loadFactorPicker(this.value)">
+    <div id="factor-picker-container"> <!-- New container for scrollbar -->
+        <div id="factor-picker"></div>
+    </div>
     <div style="text-align:right;margin-top:16px"><button onclick="window.saveFactors()">Save</button><button onclick="window.closeModal('factors')" style="background:var(--border);color:var(--text)">Cancel</button></div>
 </div></div>
 
@@ -483,6 +771,16 @@ footer {
     <h2 id="shirt-size-audit-title">Shirt Size Audit Trail</h2>
     <div id="shirt-size-audit-content" class="audit-container"></div>
 </div></div>
+
+<!-- New modal for Estimation Factor Audit -->
+<div id="modal-ef-audit" class="message-box-overlay"> <!-- Reusing overlay class for simplicity -->
+    <div class="modal">
+        <button class="close" onclick="window.closeModal('ef-audit')">×</button>
+        <h2 id="ef-audit-title">Estimation Factor Audit Trail</h2>
+        <div id="ef-audit-content" class="audit-container"></div>
+    </div>
+</div>
+
 
 <!-- Custom Message Box Modal -->
 <div id="messageBoxModal" class="message-box-overlay">
@@ -504,10 +802,18 @@ window.efList = [];
 window.rtList = [];
 window.shirtSizes = [];
 window.currentInitiativeJournal = []; // Global variable to hold journal entries for the current initiative
+window.currentEstimationFactorJournal = []; // New: Global variable for estimation factor journal
 
 // Global state for initiatives sorting
 let currentSortColumn = 'created_at';
 let currentSortDirection = 'desc';
+
+// User preferences for display limits, loaded from cookie
+window.userPreferences = {
+    maxInitiatives: 8,
+    maxResourceTypes: 5,
+    maxEstimationFactors: 5
+};
 
 // Helper function to format date/time in EST
 function formatDateInEST(isoString, includeTime = true) {
@@ -583,41 +889,92 @@ function closeModal(type) {
   document.getElementById('modal-' + type).style.display = 'none';
 }
 
+// Function to toggle the flyout menu visibility
+function toggleFlyoutMenu() {
+    const flyoutMenu = document.getElementById('flyout-menu');
+    flyoutMenu.classList.toggle('active');
+}
+window.toggleFlyoutMenu = toggleFlyoutMenu; // Make it globally accessible
+
+
 function show(hash) {
   document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
   const id = (hash || '#home').slice(1);
   const sec = document.getElementById(id);
-  if (sec) sec.classList.add('active');
+  if (sec) {
+      sec.classList.add('active');
+      // Scroll to the section with an offset for the fixed header
+      const headerHeight = document.getElementById('main-header').offsetHeight;
+      // Using setTimeout with a small delay to ensure rendering is complete before scrolling
+      setTimeout(() => {
+          window.scrollTo({
+              top: sec.offsetTop - headerHeight,
+              behavior: 'smooth'
+          });
+      }, 50); // Small delay to allow layout to settle
+  }
+
   if (id === 'home') loadInitiatives(currentSortColumn, currentSortDirection); // Pass sort state
   if (id === 'factors') {
     loadRT().then(loadEF);
   }
   if (id === 'shirt-sizes') loadShirtSizes();
+  if (id === 'prefs') populatePrefsPage(); // Populate prefs fields when page is shown
+  
+  // Close the flyout menu if it's open
+  const flyoutMenu = document.getElementById('flyout-menu');
+  if (flyoutMenu.classList.contains('active')) {
+      flyoutMenu.classList.remove('active');
+  }
 }
+window.show = show; // Make it globally accessible
+
 window.addEventListener('hashchange', () => show(location.hash));
-// handle same-hash clicks
-document.querySelectorAll('nav a').forEach(link => {
-  link.addEventListener('click', e => {
-    e.preventDefault();
-    const hash = link.getAttribute('href');
-    show(hash);
-    history.pushState(null, '', hash);
-  });
-});
-// initial render
-show(location.hash);
 
 // Resource Types CRUD
 async function loadRT() {
   const res = await fetch(API + '/api/resource-types');
-  const list = await res.json();
-  window.rtList = list;
-  const tbody = document.querySelector('#rt-table tbody'); tbody.innerHTML = '';
-  list.forEach(r => {
+  const allResourceTypes = await res.json();
+  window.rtList = allResourceTypes; // Store all resource types
+
+  const searchQuery = document.getElementById('rt-search-input')?.value.toLowerCase() || '';
+
+  // Filter resource types based on search query
+  let filteredResourceTypes = allResourceTypes.filter(r => {
+    return r.name.toLowerCase().includes(searchQuery) || (r.description && r.description.toLowerCase().includes(searchQuery));
+  });
+
+  // Sort filtered resource types alphabetically by name
+  filteredResourceTypes.sort((a, b) => a.name.localeCompare(b.name));
+
+  const tbody = document.querySelector('#rt-table tbody');
+  tbody.innerHTML = '';
+
+  // Limit the number of displayed items
+  const displayLimit = window.userPreferences.maxResourceTypes;
+  const itemsToDisplay = filteredResourceTypes.slice(0, displayLimit);
+
+  itemsToDisplay.forEach(r => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${r.name}</td><td>${r.description||''}</td><td><button onclick="window.editRT('${r.id}')">Edit</button><button onclick=\"window.delRT('${r.id}')\" style=\"background:var(--red)\">Del</button></td>`;
     tbody.appendChild(tr);
   });
+
+  // Dynamically adjust table container height if needed (though fixed is set in CSS)
+  const rtTableContainer = document.getElementById('rt-table-container');
+  if (rtTableContainer) {
+      // Calculate approximate row height (e.g., 45px per row including padding/border)
+      // This is a fallback if CSS max-height isn't perfectly aligned with row count
+      // For simplicity and consistency with fixed CSS, we'll rely on the CSS max-height.
+      // If dynamic height based on actual content is strictly needed, this is where it would go.
+  }
+}
+// New function to clear and open Resource Type modal for adding
+function openAddResourceTypeModal() {
+    document.getElementById('rt-id').value = '';
+    document.getElementById('rt-name').value = '';
+    document.getElementById('rt-desc').value = '';
+    openModal('rt');
 }
 function editRT(id) {
   const rt = window.rtList.find(x => x.id === id);
@@ -627,9 +984,6 @@ function editRT(id) {
   openModal('rt');
 }
 async function delRT(id) {
-  showMessage('Confirm Delete', 'Are you sure you want to delete this resource type?', 'confirm');
-  // Using a custom confirm, need to modify this to be non-blocking or use a promise
-  // For now, keeping the original confirm behavior for simplicity, but noting it needs refactor.
   if (!confirm('Delete?')) return; 
   await fetch(API + `/api/resource-types/${id}`, { method: 'DELETE' });
   loadRT();
@@ -659,15 +1013,44 @@ function renderEFGrid() {
   });
 }
 async function loadEF() {
-  renderEFGrid();
-  const res = await fetch(API + '/api/estimation-factors'); const list = await res.json(); window.efList = list;
-  const tbody = document.querySelector('#ef-table tbody'); tbody.innerHTML = '';
-  list.forEach(f => {
+  renderEFGrid(); // This is for the modal, keep it.
+  const res = await fetch(API + '/api/estimation-factors');
+  const allFactors = await res.json();
+  window.efList = allFactors; // Store all factors
+
+  const searchQuery = document.getElementById('ef-search-input')?.value.toLowerCase() || '';
+
+  // Filter factors based on search query
+  let filteredFactors = allFactors.filter(f => {
+    const factorName = f.name.toLowerCase();
+    const factorDescription = (f.description || '').toLowerCase(); // Include description in search
+    const resourceNames = Object.entries(f.hoursPerResourceType || {})
+      .map(([id]) => {
+        const r = window.rtList.find(x => x.id === id);
+        return r ? r.name.toLowerCase() : '';
+      })
+      .join(' ');
+    return factorName.includes(searchQuery) || factorDescription.includes(searchQuery) || resourceNames.includes(searchQuery);
+  });
+
+  // Sort filtered factors alphabetically by name
+  filteredFactors.sort((a, b) => a.name.localeCompare(b.name));
+
+  const tbody = document.querySelector('#ef-table tbody');
+  tbody.innerHTML = '';
+
+  // Limit the number of displayed items
+  const displayLimit = window.userPreferences.maxEstimationFactors;
+  const itemsToDisplay = filteredFactors.slice(0, displayLimit);
+
+  itemsToDisplay.forEach(f => {
     const hrs = f.hoursPerResourceType || {};
     const names = Object.entries(hrs).filter(([,v])=>v>0).map(([id])=>{ const r=window.rtList.find(x=>x.id===id); return r?r.name:id; }).join(',');
     const total = Object.values(hrs).reduce((a,b)=>a+b,0), days = (total/8).toFixed(1);
+    const createdDate = formatDateInEST(f.created_at, true);
+    const updatedDate = formatDateInEST(f.updated_at, true);
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${f.name}</td><td>${names}</td><td>${days}</td><td>${total}</td><td><button onclick=\"window.editEF('${f.id}')\">Edit</button><button onclick=\"window.delEF('${f.id}')\" style=\"background:var(--red)\">Del</button></td>`;
+    tr.innerHTML=`<td>${f.name}</td><td>${names}</td><td>${days}</td><td>${total}</td><td style="white-space:nowrap;"><button onclick=\"window.editEF('${f.id}')\">Edit</button><button onclick=\"window.delEF('${f.id}')\" style=\"background:var(--red)\">Del</button><button onclick="window.showAuditTrailEF('${f.id}', '${f.name}')">🔍</button></td>`;
     tbody.appendChild(tr);
   });
 }
@@ -675,6 +1058,7 @@ async function addEstimationFactor() { // Made async to await loadRT()
   await loadRT(); // Ensure resource types are loaded before rendering the grid
   document.getElementById('ef-id').value = ''; // Clear ID for new entry
   document.getElementById('ef-name').value = '';
+  document.getElementById('ef-description').value = ''; // Clear description
   // Clear all resource hour inputs
   (window.rtList||[]).forEach(rt => {
       const inp = document.getElementById(`ef-h-${rt.id}`);
@@ -682,65 +1066,136 @@ async function addEstimationFactor() { // Made async to await loadRT()
       const sel = document.getElementById(`ef-u-${rt.id}`);
       if (sel) sel.value = 'h'; // Reset to hours
   });
+  document.getElementById('ef-created').textContent = ''; // Clear created_at
+  document.getElementById('ef-updated').textContent = ''; // Clear updated_at
+  window.currentEstimationFactorJournal = []; // Clear journal for new factor
+  renderJournalLogEF(); // Render empty journal
+  document.getElementById('ef-journal-comment-input').value = ''; // Clear comment input
   renderEFGrid(); // Re-render the grid after ensuring rtList is populated
   openModal('ef');
 }
-function editEF(id) {
+async function editEF(id) { // Made async to fetch full factor data
+  await loadRT(); // Ensure resource types are loaded for renderEFGrid
   const f = window.efList.find(x=>x.id===id);
-  document.getElementById('ef-id').value=id; document.getElementById('ef-name').value=f.name;
-  renderEFGrid(); let hrs=f.hoursPerResourceType||{};
+  if (!f) { showMessage('Error', 'Estimation Factor not found.', 'error'); return; } // Added error handling
+
+  document.getElementById('ef-id').value=id; 
+  document.getElementById('ef-name').value=f.name;
+  document.getElementById('ef-description').value = f.description || ''; // Populate description
+  
+  renderEFGrid(); 
+  let hrs=f.hoursPerResourceType||{};
   Object.entries(hrs).forEach(([rtId,val])=>{
     const inp=document.getElementById(`ef-h-${rtId}`), sel=document.getElementById(`ef-u-${rtId}`);
     if(inp){ if(val%8===0){inp.value=val/8; sel.value='d';} else{inp.value=val; sel.value='h';} }
-  }); openModal('ef');
+  }); 
+
+  document.getElementById('ef-created').textContent = formatDateInEST(f.created_at);
+  document.getElementById('ef-updated').textContent = formatDateInEST(f.updated_at);
+  window.currentEstimationFactorJournal = f.journal_entries || []; // Load journal
+  renderJournalLogEF(); // Render the loaded journal entries
+  document.getElementById('ef-journal-comment-input').value = ''; // Clear comment input
+  openModal('ef');
 }
 async function delEF(id) { 
-  showMessage('Confirm Delete', 'Are you sure you want to delete this estimation factor?', 'confirm');
-  // For now, keeping the original confirm behavior for simplicity, but noting it needs refactor.
   if(!confirm('Delete?')) return; 
   await fetch(API+`/api/estimation-factors/${id}`,{method:'DELETE'}); loadEF(); 
 }
 async function saveEstimationFactor() {
   const id=document.getElementById('ef-id').value.trim(), name=document.getElementById('ef-name').value.trim(); if(!name){showMessage('Error', 'Name required', 'error');return;}
+  const description = document.getElementById('ef-description').value.trim(); // Get description
   const hours={}; (window.rtList||[]).forEach(rt=>{ const inp=document.getElementById(`ef-h-${rt.id}`), sel=document.getElementById(`ef-u-${rt.id}`); if(!inp)return;let val=+inp.value; if(val<=0)return; if(sel.value==='d') val*=8; hours[rt.id]=val; });
+  
+  const payload = {
+      name,
+      description, // Add description to payload
+      hoursPerResourceType: hours,
+      journal_entries: window.currentEstimationFactorJournal // Send journal entries
+  };
+
   const url=id?`/api/estimation-factors/${id}`:'/api/estimation-factors', method=id?'PUT':'POST';
-  const res=await fetch(API+url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify({name,hoursPerResourceType:hours})});
+  const res=await fetch(API+url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   if(!res.ok){showMessage('Error', 'Error:'+res.status, 'error');return;} closeModal('ef'); loadEF();
 }
 
 // Factors Modal and T-Shirt Sizing
-async function loadFactorPicker(){
+async function loadFactorPicker(searchQuery = ''){
   const area=document.getElementById('factor-picker'); area.innerHTML='';
-  // Sort window.efList by name before rendering
-  const sortedEfList = [...window.efList].sort((a, b) => a.name.localeCompare(b.name));
+  
+  // Filter and sort window.efList
+  const lowerCaseSearchQuery = searchQuery.toLowerCase();
+  
+  // First, map the factors to include their checked status for sorting
+  const factorsWithCheckedStatus = window.efList.map(f => {
+      const isChecked = window.selectedFactors.some(sf => sf.factorId === f.id);
+      return { ...f, isChecked: isChecked };
+  });
 
-  sortedEfList.forEach(f=>{
+  const filteredAndSortedEfList = factorsWithCheckedStatus
+    .filter(f => {
+      const factorName = f.name.toLowerCase();
+      const factorDescription = (f.description || '').toLowerCase(); // Include description in search
+      const resourceNames = Object.entries(f.hoursPerResourceType || {})
+        .map(([id]) => {
+          const r = window.rtList.find(x => x.id === id);
+          return r ? r.name.toLowerCase() : '';
+        })
+        .join(' ');
+      return factorName.includes(lowerCaseSearchQuery) || factorDescription.includes(lowerCaseSearchQuery) || resourceNames.includes(lowerCaseSearchQuery);
+    })
+    .sort((a, b) => {
+        // Primary sort: checked status (true first)
+        if (a.isChecked && !b.isChecked) return -1;
+        if (!a.isChecked && b.isChecked) return 1;
+        // Secondary sort: alphabetical by name
+        return a.name.localeCompare(b.name);
+    });
+
+  filteredAndSortedEfList.forEach(f=>{
     const row=document.createElement('div');
     row.className='factor-item'; // Apply new class for alignment
 
-    const selected = window.selectedFactors.find(sf => sf.factorId === f.id);
-    const checked = selected ? 'checked' : '';
-    const qty = selected ? selected.quantity : '1';
-    const qtyDisplay = selected ? 'inline-block' : 'none'; // Initial display state
+    const checked = f.isChecked ? 'checked' : '';
+    const qty = window.selectedFactors.find(sf => sf.factorId === f.id)?.quantity || '1';
+    const qtyDisplay = f.isChecked ? 'inline-block' : 'none'; // Initial display state
+
+    // Generate resource details string
+    let resourceDetails = '';
+    const hrs = f.hoursPerResourceType || {};
+    const resourceParts = Object.entries(hrs)
+        .filter(([, v]) => v > 0)
+        .map(([id, val]) => {
+            const r = window.rtList.find(x => x.id === id);
+            return r ? `${r.name}: ${val}h` : `${id}: ${val}h`;
+        });
+    if (resourceParts.length > 0) {
+        resourceDetails = `(${resourceParts.join(', ')})`;
+    }
+
 
     // Use a custom checkbox structure
     row.innerHTML = `
         <label class="custom-checkbox">
-            <input type="checkbox" data-id="${f.id}" onchange="window.toggleQty('${f.id}'); window.updateFactorCalculations()" ${checked}>
+            <input type="checkbox" data-id="${f.id}" onchange="window.toggleQty('${f.id}');" ${checked}>
             <span class="checkmark"></span>
-            ${f.name}
         </label>
+        <div class="factor-item-content">
+            <div class="factor-name">${f.name}</div>
+            <div class="factor-resources">${resourceDetails}</div>
+        </div>
         <input type="number" id="qty-${f.id}" value="${qty}" min="1" oninput="window.updateFactorCalculations()" style="display:${qtyDisplay}">
     `;
     area.appendChild(row);
   });
   updateFactorCalculations();
   // Ensure initial state of quantity inputs is correctly set for transition
-  sortedEfList.forEach(f => { // Iterate over sorted list
-      toggleQty(f.id); // Call toggleQty for each to set initial display/opacity
+  filteredAndSortedEfList.forEach(f => { // Iterate over sorted list
+      toggleQtyDisplay(f.id); // Call toggleQtyDisplay for each to set initial display/opacity
   });
 }
-function toggleQty(id){
+
+// Renamed from toggleQty to toggleQtyDisplay to clarify its purpose
+function toggleQtyDisplay(id){
     const cb = document.querySelector(`#factor-picker input[data-id='${id}']`);
     const qtyInput = document.getElementById(`qty-${id}`);
     if (cb && qtyInput) {
@@ -764,28 +1219,45 @@ function toggleQty(id){
         }
     }
 }
+
+// New function to handle checkbox change and re-render the list
+function toggleQty(id) {
+    const cb = document.querySelector(`#factor-picker input[data-id='${id}']`);
+    const qtyInput = document.getElementById(`qty-${id}`);
+
+    if (cb.checked) {
+        // If checked, add to selectedFactors
+        const factor = window.efList.find(f => f.id === id);
+        if (factor && !window.selectedFactors.some(sf => sf.factorId === id)) {
+            window.selectedFactors.push({
+                factorId: factor.id,
+                quantity: +qtyInput.value || 1,
+                name: factor.name,
+                hoursPerResourceType: factor.hoursPerResourceType
+            });
+        }
+    } else {
+        // If unchecked, remove from selectedFactors
+        window.selectedFactors = window.selectedFactors.filter(sf => sf.factorId !== id);
+    }
+    
+    // Re-render the factor picker to apply the new sorting and display states
+    const currentSearchQuery = document.getElementById('factor-search-input').value;
+    loadFactorPicker(currentSearchQuery);
+    updateFactorCalculations(); // Update calculations immediately
+}
+
+
 async function openFactorModal() {
     await loadRT();
     await loadEF();
     await loadShirtSizes(); // Load shirt sizes as well
-    loadFactorPicker();
+    document.getElementById('factor-search-input').value = ''; // Clear search input on open
+    loadFactorPicker(); // Load all factors initially
     openModal('factors');
 }
 function saveFactors() {
-    const newSelectedFactors = [];
-    (window.efList||[]).forEach(f => {
-        const cb = document.querySelector(`#factor-picker input[data-id='${f.id}']`);
-        if (cb && cb.checked) {
-            const qty = +document.getElementById(`qty-${f.id}`).value || 1;
-            newSelectedFactors.push({ 
-                factorId: f.id, 
-                quantity: qty,
-                name: f.name,
-                hoursPerResourceType: f.hoursPerResourceType
-            });
-        }
-    });
-    window.selectedFactors = newSelectedFactors;
+    // selectedFactors is already maintained by toggleQty, so no need to rebuild it here
     renderSelectedFactorsSummary();
 
     // Recalculate total hours and shirt size for display in the main initiative modal
@@ -811,7 +1283,7 @@ function getShirtSizeFromHours(hours) {
             size = s.size;
         } else {
             // If current hours are less than the threshold, the previous size was the correct one.
-            // This break ensures we pick the smallest size that fits the hours.
+            // This break ensures we pick the smallest size that.
             break; 
         }
     }
@@ -819,8 +1291,10 @@ function getShirtSizeFromHours(hours) {
 }
 function updateFactorCalculations() {
     let totalHours = 0;
+    // Iterate over all factors in window.efList (not just filtered ones)
     (window.efList||[]).forEach(f => {
         const cb = document.querySelector(`#factor-picker input[data-id='${f.id}']`);
+        // Only include if the checkbox exists (meaning it was rendered) and is checked
         if (cb && cb.checked) {
             const qty = +document.getElementById(`qty-${f.id}`).value || 0;
             const totalFactorHours = Object.values(f.hoursPerResourceType || {}).reduce((sum, h) => sum + h, 0);
@@ -841,7 +1315,7 @@ function updateFactorCalculations() {
     document.getElementById('factor-size').textContent = `Size: ${shirtSize}`;
 }
 
-// Journal functions
+// Journal functions for Initiatives
 function renderJournalLog() {
     const journalLogDiv = document.getElementById('initiative-journal-log');
     journalLogDiv.innerHTML = ''; // Clear existing entries
@@ -856,26 +1330,16 @@ function renderJournalLog() {
             if (entry.type === 'audit') {
                 entryDiv.classList.add('audit');
                 let details = '';
+                // Ensure oldData and newData are objects, even if they were empty strings or null
+                const oldData = typeof entry.old_data === 'object' && entry.old_data !== null ? entry.old_data : {};
+                const newData = typeof entry.new_data === 'object' && entry.new_data !== null ? entry.new_data : {};
+
                 if (entry.action === 'created') {
-                    const newData = entry.new_data;
                     details = `Created with estimated hours: ${newData.computed_hours} and size: ${newData.shirt_size}.`;
                 } else if (entry.action === 'updated') {
-                    const oldData = entry.old_data;
-                    const newData = entry.new_data;
-                    
-                    let oldFactors = [];
-                    try {
-                        oldFactors = JSON.parse(oldData.selected_factors || '[]');
-                    } catch (e) {
-                        console.error("Error parsing oldData.selected_factors in renderJournalLog:", e, oldData.selected_factors);
-                    }
-                    
-                    let newFactors = [];
-                    try {
-                        newFactors = JSON.parse(newData.selected_factors || '[]');
-                    } catch (e) {
-                        console.error("Error parsing newData.selected_factors in renderJournalLog:", e, newData.selected_factors);
-                    }
+                    // CRITICAL FIX: Ensure selected_factors are parsed into arrays
+                    const oldFactors = JSON.parse(oldData.selected_factors || '[]');
+                    const newFactors = JSON.parse(newData.selected_factors || '[]');
 
                     const diffs = [];
                     const keysToCompare = [
@@ -904,8 +1368,9 @@ function renderJournalLog() {
 
                     // Compare selected_factors separately
                     // Sort factors before stringifying for consistent comparison
-                    const oldFactorsStr = JSON.stringify([...oldFactors].sort((a,b) => a.factorId.localeCompare(b.factorId)));
-                    const newFactorsStr = JSON.stringify([...newFactors].sort((a,b) => a.factorId.localeCompare(b.factorId)));
+                    // CRITICAL FIX: Ensure factorId is handled safely for localeCompare
+                    const oldFactorsStr = JSON.stringify([...oldFactors].sort((a, b) => (a?.factorId || '').localeCompare(b?.factorId || '')));
+                    const newFactorsStr = JSON.stringify([...newFactors].sort((a, b) => (a?.factorId || '').localeCompare(b?.factorId || '')));
 
                     if (oldFactorsStr !== newFactorsStr) {
                         // Detailed factor changes
@@ -926,8 +1391,10 @@ function renderJournalLog() {
                         });
                     }
                     details = diffs.length > 0 ? diffs.join('<br>') : 'No changes to tracked fields.';
+                } else if (entry.action === 'duplicated_from') { // New audit type
+                    details = `Duplicated from: ${entry.original_name}.`;
                 }
-                entryDiv.innerHTML = `<span class="timestamp">${formattedDate}</span><h4>${entry.action.charAt(0).toUpperCase() + entry.action.slice(1)}</h4><p>${details}</p>`;
+                entryDiv.innerHTML = `<span class="timestamp">${formattedDate}</span><h4>${entry.action.charAt(0).toUpperCase() + entry.action.slice(1).replace(/_/g, ' ')}</h4><p>${details}</p>`;
             } else { // type === 'comment'
                 entryDiv.innerHTML = `<span class="timestamp">${formattedDate}</span>${entry.text}`;
             }
@@ -1006,13 +1473,122 @@ function addJournalComment() {
 }
 
 
+// Journal functions for Estimation Factors (New)
+function renderJournalLogEF() {
+    const journalLogDiv = document.getElementById('ef-journal-log');
+    journalLogDiv.innerHTML = ''; // Clear existing entries
+    if (window.currentEstimationFactorJournal && window.currentEstimationFactorJournal.length > 0) {
+        // Sort entries by timestamp in ASCENDING order (oldest first)
+        const sortedJournal = [...window.currentEstimationFactorJournal].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        sortedJournal.forEach(entry => {
+            const entryDiv = document.createElement('div');
+            entryDiv.className = 'journal-entry';
+            const formattedDate = formatDateInEST(entry.timestamp);
+
+            if (entry.type === 'audit') {
+                entryDiv.classList.add('audit');
+                let details = '';
+                // Ensure oldData and newData are objects, even if they were empty strings or null
+                const oldData = typeof entry.old_data === 'object' && entry.old_data !== null ? entry.old_data : {};
+                const newData = typeof entry.new_data === 'object' && entry.new_data !== null ? entry.new_data : {};
+
+                // console.log('DEBUG: EF Audit Entry - Action:', entry.action); // Debugging
+                // console.log('DEBUG: EF Audit Entry - Old Data:', oldData); // Debugging
+                // console.log('DEBUG: EF Audit Entry - New Data:', newData); // Debugging
+                // console.log('DEBUG: EF Audit Entry - New Data Name:', newData.name); // Debugging
+
+                if (entry.action === 'created') {
+                    details = `Created factor: ${newData.name ? newData.name : 'N/A'}.`; // Robust check for name
+                } else if (entry.action === 'updated') {
+                    const diffs = [];
+                    // Compare name
+                    if (oldData.name !== newData.name) {
+                        diffs.push(`- Changed name from <span class="diff-removed">${oldData.name || '""'}</span> to <span class="diff-added">${newData.name || '""'}</span>`);
+                    }
+                    // Compare description
+                    if (oldData.description !== newData.description) {
+                        diffs.push(`- Changed description from <span class="diff-removed">${oldData.description || '""'}</span> to <span class="diff-added">${newData.description || '""'}</span>`);
+                    }
+
+                    // Compare hoursPerResourceType
+                    const oldHours = oldData.hoursPerResourceType || {};
+                    const newHours = newData.hoursPerResourceType || {};
+
+                    const allResourceIds = new Set([...Object.keys(oldHours), ...Object.keys(newHours)]);
+                    allResourceIds.forEach(resId => {
+                        const oldVal = oldHours[resId] || 0;
+                        const newVal = newHours[resId] || 0;
+                        const resourceName = window.rtList.find(r => r.id === resId)?.name || resId; // Get resource name
+
+                        if (oldVal === 0 && newVal > 0) {
+                            diffs.push(`- <span class="diff-added">Added resource ${resourceName} with ${newVal}h</span>`);
+                        } else if (oldVal > 0 && newVal === 0) {
+                            diffs.push(`- <span class="diff-removed">Removed resource ${resourceName} (was ${oldVal}h)</span>`);
+                        } else if (oldVal !== newVal) {
+                            diffs.push(`- Changed hours for ${resourceName} from <span class="diff-removed">${oldVal}h</span> to <span class="diff-added">${newVal}h</span>`);
+                        }
+                    });
+                    details = diffs.length > 0 ? diffs.join('<br>') : 'No changes to tracked fields.';
+                } else if (entry.action === 'duplicated_from') { // New audit type
+                    details = `Duplicated from: ${entry.original_name}.`;
+                }
+                entryDiv.innerHTML = `<span class="timestamp">${formattedDate}</span><h4>${entry.action.charAt(0).toUpperCase() + entry.action.slice(1).replace(/_/g, ' ')}</h4><p>${details}</p>`;
+            } else { // type === 'comment'
+                entryDiv.innerHTML = `<span class="timestamp">${formattedDate}</span>${entry.text}`;
+            }
+            journalLogDiv.appendChild(entryDiv);
+        });
+        setTimeout(() => {
+            journalLogDiv.scrollTop = journalLogDiv.scrollHeight;
+        }, 50);
+    } else {
+        journalLogDiv.innerHTML = '<p style="text-align: center; color: #888;">No journal entries yet.</p>';
+    }
+}
+
+// Removed saveJournalEntryToBackendEF function.
+// Journal entries are now saved as part of the main saveEstimationFactor call.
+
+function addJournalCommentEF() {
+    const commentInput = document.getElementById('ef-journal-comment-input');
+    const commentText = commentInput.value.trim();
+    // No factorId check needed here, as saving is handled by main Save button
+    // No API call here, just update local state
+
+    if (!commentText) {
+        return;
+    }
+
+    const newEntry = {
+        timestamp: new Date().toISOString(),
+        type: 'comment',
+        text: commentText
+    };
+    window.currentEstimationFactorJournal.push(newEntry);
+    renderJournalLogEF();
+    commentInput.value = '';
+
+    // The actual saving to backend will happen when saveEstimationFactor() is called.
+}
+
+
 // Initiatives CRUD
 async function loadInitiatives(sortBy = 'created_at', sortDirection = 'desc') {
   const res = await fetch(API + '/api/initiatives');
-  let list = await res.json();
+  let allInitiatives = await res.json();
+  window.initList = allInitiatives; // Store all initiatives
 
-  // Sort the list based on sortBy and sortDirection
-  list.sort((a, b) => {
+  const searchQuery = document.getElementById('init-search-input')?.value.toLowerCase() || '';
+
+  // Filter initiatives based on search query
+  let filteredInitiatives = allInitiatives.filter(i => {
+    return i.name.toLowerCase().includes(searchQuery) || 
+           (i.custom_id && i.custom_id.toLowerCase().includes(searchQuery)) ||
+           (i.description && i.description.toLowerCase().includes(searchQuery));
+  });
+
+  // Sort the filtered list based on sortBy and sortDirection
+  filteredInitiatives.sort((a, b) => {
     let valA = a[sortBy];
     let valB = b[sortBy];
 
@@ -1041,10 +1617,14 @@ async function loadInitiatives(sortBy = 'created_at', sortDirection = 'desc') {
     return 0;
   });
 
-  window.initList = list;
   const tbody = document.querySelector('#init-table tbody');
   tbody.innerHTML = '';
-  list.forEach(i => {
+
+  // Limit the number of displayed items
+  const displayLimit = window.userPreferences.maxInitiatives;
+  const itemsToDisplay = filteredInitiatives.slice(0, displayLimit);
+
+  itemsToDisplay.forEach(i => {
     const createdDate = formatDateInEST(i.created_at, true); // Format in EST with time
     const updatedDate = formatDateInEST(i.updated_at, true); // Format in EST with time
     const startDate = formatDateInEST(i.start_date, false); // Format in EST (date only)
@@ -1131,8 +1711,6 @@ function editInitiative(id) {
     openModal('init');
 }
 async function deleteInitiative(id){ 
-  showMessage('Confirm Delete', 'Are you sure you want to delete this initiative?', 'confirm');
-  // For now, keeping the original confirm behavior for simplicity, but noting it needs refactor.
   if(!confirm('Delete?')) return; 
   await fetch(API+`/api/initiatives/${id}`,{method:'DELETE'}); loadInitiatives(); 
 }
@@ -1174,7 +1752,68 @@ async function saveInitiative(){
     loadInitiatives(); 
 }
 
-// Audit Trail
+async function duplicateInitiative() {
+    const originalName = document.getElementById('init-name').value.trim();
+    if (!originalName) { showMessage('Error', 'Name is required to duplicate.', 'error'); return; }
+
+    const newName = originalName + " Copy";
+    const customId = document.getElementById('init-custom-id').value.trim();
+    const description = document.getElementById('init-desc').value.trim();
+    const priority = document.getElementById('init-priority').value;
+    const priorityNum = +document.getElementById('init-priority-num').value || 0;
+    const status = document.getElementById('init-status').value;
+    const start_date = document.getElementById('init-start-date').value.trim();
+    const end_date = document.getElementById('init-end-date').value.trim();
+    const classification = 'Internal'; // Default for duplicated
+    const scope = document.getElementById('init-scope').value.trim();
+    const outOf = document.getElementById('init-out').value.trim();
+
+    const newJournalEntry = {
+        timestamp: new Date().toISOString(),
+        type: 'audit',
+        action: 'duplicated_from',
+        original_name: originalName
+    };
+
+    const payload = {
+        name: newName,
+        custom_id: customId,
+        description,
+        priority,
+        priority_num: priorityNum,
+        status,
+        classification,
+        scope,
+        out_of_scope: outOf,
+        selected_factors: window.selectedFactors, // Copy selected factors
+        start_date: start_date || null,
+        end_date: end_date || null,
+        journal_entries: [newJournalEntry] // Add the duplication entry
+    };
+
+    try {
+        const res = await fetch(API + '/api/initiatives', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || `Server responded with status ${res.status}`);
+        }
+
+        showMessage('Success', `Initiative "${newName}" duplicated successfully!`, 'success');
+        closeModal('init');
+        loadInitiatives(); // Reload the table to show the new initiative
+    } catch (error) {
+        console.error('Duplicate initiative failed:', error);
+        showMessage('Error', 'Failed to duplicate initiative: ' + error.message, 'error');
+    }
+}
+
+
+// Audit Trail for Initiatives
 async function showAuditTrail(initiativeId, initiativeName) {
     document.getElementById('audit-title').textContent = `Audit Trail: ${initiativeName}`;
     const auditContent = document.getElementById('audit-content');
@@ -1201,26 +1840,16 @@ async function showAuditTrail(initiativeId, initiativeName) {
                 let details = '';
                 if (entry.type === 'audit') {
                     logItem.classList.add('audit'); // Add audit class for styling
+                    // Ensure oldData and newData are objects, even if they were empty strings or null
+                    const oldData = typeof entry.old_data === 'object' && entry.old_data !== null ? entry.old_data : {};
+                    const newData = typeof entry.new_data === 'object' && entry.new_data !== null ? entry.new_data : {};
+
                     if (entry.action === 'created') {
-                        const newData = entry.new_data; // Already parsed by backend
                         details = `Created with estimated hours: ${newData.computed_hours} and size: ${newData.shirt_size}.`;
                     } else if (entry.action === 'updated') {
-                        const oldData = entry.old_data; // Already parsed by backend
-                        const newData = entry.new_data; // Already parsed by backend
-                        
-                        let oldFactors = [];
-                        try {
-                            oldFactors = JSON.parse(oldData.selected_factors || '[]');
-                        } catch (e) {
-                            console.error("Error parsing oldData.selected_factors in showAuditTrail:", e, oldData.selected_factors);
-                        }
-                        
-                        let newFactors = [];
-                        try {
-                            newFactors = JSON.parse(newData.selected_factors || '[]');
-                        } catch (e) {
-                            console.error("Error parsing newData.selected_factors in showAuditTrail:", e, newData.selected_factors);
-                        }
+                        // CRITICAL FIX: Ensure selected_factors are parsed into arrays
+                        const oldFactors = JSON.parse(oldData.selected_factors || '[]');
+                        const newFactors = JSON.parse(newData.selected_factors || '[]');
 
                         const diffs = [];
                         // Keys to compare for audit log (excluding internal/timestamp fields)
@@ -1250,8 +1879,9 @@ async function showAuditTrail(initiativeId, initiativeName) {
 
                         // Compare selected_factors separately
                         // Sort factors before stringifying for consistent comparison
-                        const oldFactorsStr = JSON.stringify([...oldFactors].sort((a,b) => a.factorId.localeCompare(b.factorId)));
-                        const newFactorsStr = JSON.stringify([...newFactors].sort((a,b) => a.factorId.localeCompare(b.factorId)));
+                        // CRITICAL FIX: Ensure factorId is handled safely for localeCompare
+                        const oldFactorsStr = JSON.stringify([...oldFactors].sort((a, b) => (a?.factorId || '').localeCompare(b?.factorId || '')));
+                        const newFactorsStr = JSON.stringify([...newFactors].sort((a, b) => (a?.factorId || '').localeCompare(b?.factorId || '')));
 
                         if (oldFactorsStr !== newFactorsStr) {
                             // Detailed factor changes
@@ -1274,9 +1904,11 @@ async function showAuditTrail(initiativeId, initiativeName) {
                         details = diffs.length > 0 ? diffs.join('<br>') : 'No changes to tracked fields.';
                     } else if (entry.action === 'deleted') {
                         details = 'Initiative was deleted.'; // This entry would only exist if we had a separate audit table for deletions
+                    } else if (entry.action === 'duplicated_from') { // New audit type
+                        details = `Duplicated from: ${entry.original_name}.`;
                     }
                     logItem.innerHTML = `
-                        <h4>${entry.action.charAt(0).toUpperCase() + entry.action.slice(1)} on ${formatDateInEST(entry.timestamp)}</h4>
+                        <h4>${entry.action.charAt(0).toUpperCase() + entry.action.slice(1).replace(/_/g, ' ')} on ${formatDateInEST(entry.timestamp)}</h4>
                         <p>${details}</p>
                     `;
                 } else { // type === 'comment'
@@ -1290,7 +1922,144 @@ async function showAuditTrail(initiativeId, initiativeName) {
         }
 
     } catch (err) {
-        auditContent.innerHTML = `<p style="color:var(--red);">Error fetching audit trail: ${err.message}</p>`;
+        auditContent.innerHTML = `<p style="color:var(--red);">Error fetching audit trail: ${err.message || err}</p>`;
+    }
+}
+
+// Audit Trail for Estimation Factors (New)
+async function showAuditTrailEF(factorId, factorName) {
+    document.getElementById('ef-audit-title').textContent = `Audit Trail: ${factorName}`;
+    const auditContent = document.getElementById('ef-audit-content');
+    auditContent.innerHTML = 'Loading...';
+    openModal('ef-audit');
+
+    try {
+        const res = await fetch(API + `/api/estimation-factors/${factorId}/audit`);
+        if (!res.ok) { throw new Error('Failed to fetch estimation factor audit trail.'); }
+        const auditLog = await res.json();
+        
+        auditContent.innerHTML = '';
+        if (auditLog.length === 0) {
+            auditContent.innerHTML = '<p>No audit history for this estimation factor.</p>';
+        } else {
+            const sortedAuditLog = [...auditLog].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+            sortedAuditLog.forEach(entry => {
+                const logItem = document.createElement('div');
+                logItem.className = 'audit-item';
+
+                let details = '';
+                if (entry.type === 'audit') {
+                    logItem.classList.add('audit');
+                    // Ensure oldData and newData are objects, even if they were empty strings or null
+                    const oldData = typeof entry.old_data === 'object' && entry.old_data !== null ? entry.old_data : {};
+                    const newData = typeof entry.new_data === 'object' && entry.new_data !== null ? entry.new_data : {};
+
+                    if (entry.action === 'created') {
+                        details = `Created factor: ${newData.name ? newData.name : 'N/A'}.`; // Robust check for name
+                    } else if (entry.action === 'updated') {
+                        const diffs = [];
+                        // Compare name
+                        if (oldData.name !== newData.name) {
+                            diffs.push(`- Changed name from <span class="diff-removed">${oldData.name || '""'}</span> to <span class="diff-added">${newData.name || '""'}</span>`);
+                        }
+                        // Compare description
+                        if (oldData.description !== newData.description) {
+                            diffs.push(`- Changed description from <span class="diff-removed">${oldData.description || '""'}</span> to <span class="diff-added">${newData.description || '""'}</span>`);
+                        }
+
+                        // Compare hoursPerResourceType
+                        const oldHours = oldData.hoursPerResourceType || {};
+                        const newHours = newData.hoursPerResourceType || {};
+
+                        const allResourceIds = new Set([...Object.keys(oldHours), ...Object.keys(newHours)]);
+                        allResourceIds.forEach(resId => {
+                            const oldVal = oldHours[resId] || 0;
+                            const newVal = newHours[resId] || 0;
+                            const resourceName = window.rtList.find(r => r.id === resId)?.name || resId; // Get resource name
+
+                            if (oldVal === 0 && newVal > 0) {
+                                diffs.push(`- <span class="diff-added">Added resource ${resourceName} with ${newVal}h</span>`);
+                            } else if (oldVal > 0 && newVal === 0) {
+                                diffs.push(`- <span class="diff-removed">Removed resource ${resourceName} (was ${oldVal}h)</span>`);
+                            } else if (oldVal !== newVal) {
+                                diffs.push(`- Changed hours for ${resourceName} from <span class="diff-removed">${oldVal}h</span> to <span class="diff-added">${newVal}h</span>`);
+                            }
+                        });
+                        details = diffs.length > 0 ? diffs.join('<br>') : 'No changes to tracked fields.';
+                    } else if (entry.action === 'duplicated_from') { // New audit type
+                        details = `Duplicated from: ${entry.original_name}.`;
+                    }
+                    logItem.innerHTML = `
+                        <h4>${entry.action.charAt(0).toUpperCase() + entry.action.slice(1).replace(/_/g, ' ')} on ${formatDateInEST(entry.timestamp)}</h4>
+                        <p>${details}</p>
+                    `;
+                } else { // type === 'comment'
+                    logItem.innerHTML = `
+                        <h4>Comment on ${formatDateInEST(entry.timestamp)}</h4>
+                        <p>${entry.text}</p>
+                    `;
+                }
+                auditContent.appendChild(logItem);
+            });
+        }
+
+    } catch (err) {
+        auditContent.innerHTML = `<p style="color:var(--red);">Error fetching audit trail: ${err.message || err}</p>`;
+    }
+}
+
+async function duplicateEstimationFactor() {
+    const originalName = document.getElementById('ef-name').value.trim();
+    if (!originalName) { showMessage('Error', 'Name is required to duplicate.', 'error'); return; }
+
+    const newName = originalName + " Copy";
+    const description = document.getElementById('ef-description').value.trim();
+    const hours = {};
+    (window.rtList || []).forEach(rt => {
+        const inp = document.getElementById(`ef-h-${rt.id}`);
+        const sel = document.getElementById(`ef-u-${rt.id}`);
+        if (inp) {
+            let val = +inp.value;
+            if (val > 0) {
+                if (sel.value === 'd') val *= 8;
+                hours[rt.id] = val;
+            }
+        }
+    });
+
+    const newJournalEntry = {
+        timestamp: new Date().toISOString(),
+        type: 'audit',
+        action: 'duplicated_from',
+        original_name: originalName
+    };
+
+    const payload = {
+        name: newName,
+        description: description,
+        hoursPerResourceType: hours,
+        journal_entries: [newJournalEntry] // Add the duplication entry
+    };
+
+    try {
+        const res = await fetch(API + '/api/estimation-factors', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || `Server responded with status ${res.status}`);
+        }
+
+        showMessage('Success', `Estimation Factor "${newName}" duplicated successfully!`, 'success');
+        closeModal('ef');
+        loadEF(); // Reload the table to show the new factor
+    } catch (error) {
+        console.error('Duplicate estimation factor failed:', error);
+        showMessage('Error', 'Failed to duplicate estimation factor: ' + error.message, 'error');
     }
 }
 
@@ -1731,9 +2500,79 @@ function handleSortClick(event) {
     }
 }
 
+// Cookie Functions
+function setCookie(name, value, days) {
+    let expires = "";
+    if (days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for(let i=0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
+function loadPreferences() {
+    const prefsCookie = getCookie('estiim_prefs');
+    if (prefsCookie) {
+        try {
+            const parsedPrefs = JSON.parse(prefsCookie);
+            window.userPreferences = {
+                maxInitiatives: parsedPrefs.maxInitiatives || 8,
+                maxResourceTypes: parsedPrefs.maxResourceTypes || 5,
+                maxEstimationFactors: parsedPrefs.maxEstimationFactors || 5
+            };
+        }
+        catch (e) {
+            console.error("Error parsing preferences cookie:", e);
+            window.userPreferences = { maxInitiatives: 8, maxResourceTypes: 5, maxEstimationFactors: 5 };
+        }
+    } else {
+        window.userPreferences = { maxInitiatives: 8, maxResourceTypes: 5, maxEstimationFactors: 5 };
+    }
+    console.log("Loaded preferences:", window.userPreferences);
+}
+
+function savePreferences() {
+    const maxInit = document.getElementById('pref-max-initiatives').value;
+    const maxRT = document.getElementById('pref-max-resource-types').value;
+    const maxEF = document.getElementById('pref-max-estimation-factors').value;
+
+    window.userPreferences.maxInitiatives = parseInt(maxInit, 10) || 8;
+    window.userPreferences.maxResourceTypes = parseInt(maxRT, 10) || 5;
+    window.userPreferences.maxEstimationFactors = parseInt(maxEF, 10) || 5;
+
+    setCookie('estiim_prefs', JSON.stringify(window.userPreferences), 365); // Store for 1 year
+    showMessage('Success', 'Preferences saved successfully!', 'success');
+    // Reload relevant sections to apply new limits
+    loadInitiatives(currentSortColumn, currentSortDirection);
+    loadRT();
+    loadEF();
+}
+
+function populatePrefsPage() {
+    document.getElementById('pref-max-initiatives').value = window.userPreferences.maxInitiatives;
+    document.getElementById('pref-max-resource-types').value = window.userPreferences.maxResourceTypes;
+    document.getElementById('pref-max-estimation-factors').value = window.userPreferences.maxEstimationFactors;
+}
+
 
 // Bootstrap
-window.addEventListener('DOMContentLoaded',()=>{ loadRT().then(()=>{ loadEF(); }); loadInitiatives(); });
+window.addEventListener('DOMContentLoaded',()=>{ 
+    loadPreferences(); // Load preferences first
+    loadRT().then(()=>{ loadEF(); }); 
+    loadInitiatives(); 
+});
 
 </script>
 </body>
