@@ -1,0 +1,6 @@
+User-Defined ID	Name	Description	Priority	Priority Number	Status	Start Date	End Date	In Scope	Out of Scope
+PROJ-001	New Marketing Website	A complete overhaul of the public-facing marketing website.	High	1	To Do	2025-09-01	2025-12-15	"New design system implementation, CMS integration, SEO optimization"	"E-commerce functionality, Customer login portal"
+PROJ-002	Q4 Analytics Dashboard	Build a new dashboard for the sales team to track quarterly performance.	Medium	3	Proposal	2025-10-01	2025-11-30	"Integration with Salesforce API, Key metrics visualization (revenue, leads, conversion rate)"	"Predictive analytics features, Mobile application version"
+PROJ-003	API Security Audit	Perform a full security audit on all public-facing APIs.	High	2	Accepted			"Penetration testing, Code review for vulnerabilities"	"Performance testing"
+PROJ-004	Mobile App Push Notifications	Implement push notification capabilities in the iOS and Android apps.	Medium	5	Draft	2025-09-15		"User-segmented notifications, Basic notification analytics"	"In-app messaging system"
+PROJ-005	Onboarding Process Refinement	Update the user onboarding flow to improve activation rates.	Low	8	To Do				"A/B testing of new welcome emails"	

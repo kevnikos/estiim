@@ -2,6 +2,10 @@
   "name": "estiim",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "seed": "node src/seed.js"
+  },
   "dependencies": {
     "express": "^4.19.2",
     "express-validator": "^7.0.1",

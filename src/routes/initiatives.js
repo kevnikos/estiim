@@ -40,6 +40,71 @@ export default function createInitiativesRouter(db) {
     res.json(rows.map(parseInitiativeRow));
   });
 
+  // POST /api/initiatives/import - Handles bulk import from TSV
+  router.post('/import', async (req, res) => {
+    const initiativesToImport = req.body;
+    if (!Array.isArray(initiativesToImport)) {
+      return res.status(400).json({ message: 'Request body must be an array of initiatives.' });
+    }
+
+    let importedCount = 0;
+    const now = new Date().toISOString();
+
+    try {
+      await db.run('BEGIN TRANSACTION');
+      for (const init of initiativesToImport) {
+        if (!init.name) {
+          console.warn('Skipping initiative in import due to missing name:', init);
+          continue;
+        }
+
+        // Set defaults and calculate values for the new initiative
+        const computedHours = 0; // No factors on import
+        const shirtSize = await getShirtSize(db, computedHours);
+
+        const journalEntry = {
+            timestamp: now,
+            type: 'audit',
+            action: 'created',
+            old_data: {},
+            new_data: { name: init.name, status: init.status || 'To Do', note: 'Imported via TSV' }
+        };
+
+        await db.run(
+          `INSERT INTO initiatives (name, custom_id, description, priority, priority_num, status, classification, scope, out_of_scope, selected_factors, computed_hours, shirt_size, journal_entries, start_date, end_date, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            init.name,
+            init.custom_id || null,
+            init.description || null,
+            init.priority || 'Low',
+            parseInt(init.priority_num, 10) || 0,
+            init.status || 'To Do',
+            'Imported',
+            init.scope || null,
+            init.out_of_scope || null,
+            '[]',
+            computedHours,
+            shirtSize,
+            JSON.stringify([journalEntry]),
+            init.start_date || null,
+            init.end_date || null,
+            now,
+            now
+          ]
+        );
+        importedCount++;
+      }
+      await db.run('COMMIT');
+      res.status(201).json({ importedCount });
+    } catch (error) {
+      await db.run('ROLLBACK');
+      console.error('Import failed:', error);
+      res.status(500).json({ message: 'Failed to import initiatives due to a server error.' });
+    }
+  });
+
+
   // GET /api/initiatives/:id
   router.get('/:id', async (req, res) => {
     const { id } = req.params;
