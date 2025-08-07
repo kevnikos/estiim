@@ -1,0 +1,19 @@
+# Ignore node_modules, as they will be installed inside the container
+node_modules
+
+# Ignore local database files and backups
+*.db
+*.bak
+backups/
+data/
+
+# Ignore npm debug logs
+npm-debug.log
+
+# Ignore Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+#manual backup
+estiim.zip
