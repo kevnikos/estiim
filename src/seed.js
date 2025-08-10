@@ -107,6 +107,7 @@ async function seedDatabase() {
         priority: 'High',
         priority_num: 1,
         status: 'To Do',
+        estimation_type: 'WAG',
         start_date: '2025-09-01',
         end_date: '2025-12-15',
         scope: '- New design system implementation\n- CMS integration\n- SEO optimization',
@@ -124,7 +125,8 @@ async function seedDatabase() {
         description: 'Build a new dashboard for the sales team to track quarterly performance.',
         priority: 'Medium',
         priority_num: 3,
-        status: 'Proposal',
+        status: 'Estimated',
+        estimation_type: 'Low',
         start_date: '2025-10-01',
         end_date: '2025-11-30',
         scope: '- Integration with Salesforce API\n- Key metrics visualization (revenue, leads, conversion rate)',
@@ -142,6 +144,47 @@ async function seedDatabase() {
         priority: 'High',
         priority_num: 2,
         status: 'Accepted',
+        estimation_type: 'Medium',
+        factors: [] // Example with no factors
+      },
+      {
+        name: 'Mobile App Development',
+        custom_id: 'PROJ-004',
+        description: 'Create a new mobile app for iOS and Android.',
+        priority: 'High',
+        priority_num: 4,
+        status: 'Done',
+        estimation_type: 'High',
+        factors: [] // Example with no factors
+      },
+      {
+        name: 'Website Redesign',
+        custom_id: 'PROJ-005',
+        description: 'Redesign the main website with a new theme.',
+        priority: 'Medium',
+        priority_num: 5,
+        status: 'Not Required',
+        estimation_type: 'WAG',
+        factors: [] // Example with no factors
+      },
+      {
+        name: 'Database Migration',
+        custom_id: 'PROJ-006',
+        description: 'Migrate the database from MySQL to PostgreSQL.',
+        priority: 'Low',
+        priority_num: 6,
+        status: 'Partial',
+        estimation_type: 'E4E',
+        factors: [] // Example with no factors
+      },
+      {
+        name: 'New Feature X',
+        custom_id: 'PROJ-007',
+        description: 'Implement feature X for the main application.',
+        priority: 'High',
+        priority_num: 7,
+        status: 'Rejected',
+        estimation_type: 'WAG',
         factors: [] // Example with no factors
       }
     ];
@@ -166,15 +209,14 @@ async function seedDatabase() {
       const shirtSize = await getShirtSize(db, computedHours);
 
       await db.run(
-        `INSERT INTO initiatives (name, custom_id, description, priority, priority_num, status, classification, scope, out_of_scope, selected_factors, computed_hours, shirt_size, start_date, end_date, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO initiatives (name, custom_id, description, priority, priority_num, status, classification, scope, out_of_scope, selected_factors, computed_hours, shirt_size, start_date, end_date, created_at, updated_at, estimation_type)\n         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) `,
         [
           init.name, init.custom_id, init.description, init.priority, init.priority_num, init.status,
           'Internal', init.scope, init.out_of_scope,
           JSON.stringify(selected_factors),
           computedHours, shirtSize,
           init.start_date || null, init.end_date || null,
-          now, now
+          now, now, init.estimation_type
         ]
       );
     }

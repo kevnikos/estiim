@@ -50,6 +50,8 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
       <td>${i.id || ''}</td>
       <td>${i.custom_id || ''}</td>
       <td>${i.name}</td>
+      <td>${i.priority}</td>
+      <td>${i.estimation_type}</td>
       <td>${i.status || ''}</td>
       <td>${i.shirt_size || ''}</td>
       <td>${i.computed_hours || 0}</td>
@@ -623,7 +625,7 @@ function getAuditDiffs(oldData, newData) {
         oldFactors.forEach(oldFactor => {
             if (!newFactors.find(nf => nf.factorId === oldFactor.factorId)) {
                 diffs.push(`- <span class="diff-removed">Removed factor: ${oldFactor.name} (Qty: ${oldFactor.quantity})</span>`);
-            }
+            } 
         });
     }
     return diffs;
