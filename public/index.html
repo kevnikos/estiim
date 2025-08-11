@@ -24,6 +24,37 @@ button { background:var(--primary); color:#fff; border:none; cursor:pointer; }
 button:hover { background:var(--primary-dark); }
 table { width:100%; border-collapse:collapse; margin-top:12px; }
 th, td { border:1px solid var(--border); padding:8px; text-align:left; }
+
+/* Resource list styling in estimation factor modal */
+#ef-hours {
+    max-height: 288px; /* Show 6 items before scrolling (6 x 48px) */
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+}
+
+#ef-hours .flex {
+    display: flex;
+    align-items: center;
+    padding: 6px 0;
+    gap: 12px;
+}
+
+#ef-hours label {
+    min-width: 200px !important;
+    flex: 1;
+    font-weight: 500;
+}
+
+#ef-hours input[type="number"] {
+    width: 80px;
+    text-align: right;
+}
+
+#ef-hours select {
+    width: 60px;
+}
 th[data-sort="name"],
 #init-table td:nth-child(3) { /* nth-child(3) targets the Name column's td */
     width: 25%; /* Adjust as needed */
