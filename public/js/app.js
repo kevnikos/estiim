@@ -32,9 +32,7 @@ window.currentSortDirection = 'desc';
 
 // User preferences for display limits, loaded from cookies
 window.userPreferences = {
-    maxInitiatives: 8,
-    maxResourceTypes: 5,
-    maxEstimationFactors: 5
+    initiativeStatusFilter: ''
 };
 
 // --- Function Wiring ---
