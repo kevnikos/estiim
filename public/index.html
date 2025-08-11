@@ -32,7 +32,16 @@ th { background:#f9fafb; }
 .flex { display:flex; gap:12px; flex-wrap:wrap; }
 input[type=number] { width:90px; }
 .modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:var(--overlay); display:none; align-items:center; justify-content:center; z-index:1000; }
-.modal { background:var(--card); padding:24px; border-radius:8px; max-width:900px; /* Increased max-width for two columns */ width:90%; position:relative; box-shadow:0 4px 8px rgba(0,0,0,.1); }
+.modal { 
+    background:var(--card); 
+    padding:24px; 
+    border-radius:8px; 
+    max-width: 1200px; /* Increased from 900px for wider modal */
+    width: 95%; 
+    position:relative; 
+    box-shadow:0 4px 8px rgba(0,0,0,.1); 
+    margin-top: 32px; /* More whitespace below header */
+}
 .modal h2 { margin-top:0; }
 .modal .close { position:absolute; top:12px; right:16px; background:none; border:none; font-size:18px; cursor:pointer; color:var(--text); }
 .modal pre { white-space:pre-wrap; background:#f3f4f6; padding:10px; border-radius:4px; max-height:300px; overflow-y:auto; }
@@ -567,6 +576,24 @@ footer {
     font-size: 14px;
 }
 
+/* In modal-init section */
+#init-desc, #init-scope, #init-out {
+    min-height: 80px; /* More visible lines for description, in scope, out of scope */
+}
+
+.modal {
+    max-width: 1200px;
+    width: 95%;
+    margin-top: 32px; /* More whitespace below header */
+}
+
+#init-priority-num {
+    width: 48px; /* Smaller Pri # box for 3 digits */
+}
+
+#init-custom-id {
+    width: 120px; /* Smaller User-Defined ID box for 10 chars */
+}
 </style>
 </head>
 <body>
@@ -792,8 +819,11 @@ footer {
     
     <div class="modal-content-flex">
         <div class="initiative-details-left">
-            <div class="flex"><input id="init-name" placeholder="Name" style="flex:1"><input id="init-custom-id" placeholder="User-Defined ID" style="flex:1"></div>
-            <textarea id="init-desc" placeholder="Description" style="width:100%;margin-top:12px"></textarea>
+            <div class="flex">
+                <input id="init-name" placeholder="Name" style="flex:1">
+                <input id="init-custom-id" placeholder="User-Defined ID" maxlength="10" style="width:120px">
+            </div>
+            <textarea id="init-desc" placeholder="Description" style="width:100%;margin-top:12px;min-height:80px"></textarea>
             <div class="flex" style="margin-top:12px">
                 <div>
                     <label>Priority</label><br>
@@ -801,7 +831,7 @@ footer {
                 </div>
                 <div>
                     <label>Pri #</label><br>
-                    <input id="init-priority-num" type="number" min="1" max="10">
+                    <input id="init-priority-num" type="number" min="1" max="999" style="width:48px">
                 </div>
                 <div>
                     <label>Status</label><br>
@@ -811,10 +841,19 @@ footer {
                     <label>Estimation Type</label><br>
                     <select id="init-estimation-type"></select>
                 </div>
+                <div style="margin-left:24px">
+                    <label>Start Date</label><br>
+                    <input id="init-start-date" type="date" style="width:130px">
+                </div>
+                <div>
+                    <label>End Date</label><br>
+                    <input id="init-end-date" type="date" style="width:130px">
+                </div>
             </div>
-            <div class="flex" style="margin-top:12px"><div><label>Start Date</label><br><input id="init-start-date" type="date"></div><div><label>End Date</label><br><input id="init-end-date" type="date"></div></div>
-            <textarea id="init-scope" placeholder="In Scope" style="width:100%;margin-top:12px"></textarea>
-            <textarea id="init-out" placeholder="Out of Scope" style="width:100%;margin-top:12px"></textarea>
+            <div class="flex" style="margin-top:12px">
+                <textarea id="init-scope" placeholder="In Scope" style="flex:1;min-height:80px;margin-right:8px"></textarea>
+                <textarea id="init-out" placeholder="Out of Scope" style="flex:1;min-height:80px"></textarea>
+            </div>
             
             <!-- Calculated T-Shirt Size moved here -->
             <div class="calculated-shirt-size" id="init-calculated-shirt-size"></div>
@@ -822,7 +861,9 @@ footer {
             <div style="margin-top:16px">
                 <h3>T-Shirt Factors</h3>
                 <div id="selected-factors-summary"></div>
-                <button style="margin-top:8px;" onclick="window.openFactorModal()">Select Factors</button>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                    <button style="flex:1" onclick="window.openFactorModal()">Select Factors</button>
+                </div>
             </div>
         </div>
 
