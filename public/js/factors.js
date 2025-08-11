@@ -25,7 +25,7 @@ export async function loadEF() {
 
   const tbody = document.querySelector('#ef-table tbody');
   tbody.innerHTML = '';
-  const itemsToDisplay = filteredFactors.slice(0, window.userPreferences.maxEstimationFactors);
+  const itemsToDisplay = filteredFactors;
 
   itemsToDisplay.forEach(f => {
     const hrs = f.hoursPerResourceType || {};

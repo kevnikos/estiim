@@ -42,7 +42,7 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
 
   const tbody = document.querySelector('#init-table tbody');
   tbody.innerHTML = '';
-  const itemsToDisplay = filteredInitiatives.slice(0, window.userPreferences.maxInitiatives);
+  const itemsToDisplay = filteredInitiatives;
 
   itemsToDisplay.forEach(i => {
     const tr = document.createElement('tr');
@@ -55,8 +55,6 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
       <td>${i.status || ''}</td>
       <td>${i.shirt_size || ''}</td>
       <td>${i.computed_hours || 0}</td>
-      <td>${formatDateInEST(i.start_date, false)}</td>
-      <td>${formatDateInEST(i.end_date, false)}</td>
       <td>${formatDateInEST(i.created_at, true)}</td>
       <td>${formatDateInEST(i.updated_at, true)}</td>
       <td style="white-space:nowrap;">

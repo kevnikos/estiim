@@ -11,11 +11,11 @@
 /* Added scroll-padding-top to account for sticky header */
 html, body { scroll-behavior: smooth; scroll-padding-top: 60px; /* Adjust this value if header height changes */ }
 * { box-sizing:border-box; font-family:Inter,Arial,sans-serif; }
-body { margin:0; background:var(--bg); color:var(--text); }
+body { margin:0; background:var(--bg); color:var(--text); font-size:12px; }
 header { background:var(--primary); color:#fff; padding:12px 24px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:1001; /* Ensure header is above flyout */ }
 header h1 { margin:0; font-size:22px; font-weight:600; cursor:pointer; }
 /* Removed nav a styles */
-section { display:none; padding:24px 10vw; }
+section { display:none; padding:24px; }
 section.active { display:block; }
 .card { background:var(--card); padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,.05); margin-bottom:24px; }
 h2 { margin:0 0 12px; font-size:18px; font-weight:600; }
@@ -24,6 +24,10 @@ button { background:var(--primary); color:#fff; border:none; cursor:pointer; }
 button:hover { background:var(--primary-dark); }
 table { width:100%; border-collapse:collapse; margin-top:12px; }
 th, td { border:1px solid var(--border); padding:8px; text-align:left; }
+th[data-sort="name"],
+#init-table td:nth-child(3) { /* nth-child(3) targets the Name column's td */
+    width: 25%; /* Adjust as needed */
+}
 th { background:#f9fafb; }
 .flex { display:flex; gap:12px; flex-wrap:wrap; }
 input[type=number] { width:90px; }
@@ -488,6 +492,7 @@ footer {
 #init-table-container {
     max-height: 360px; /* 8 items * ~45px height per row */
     overflow-y: auto;
+    overflow-x: auto; /* Added for horizontal scrolling */
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 10px;
@@ -615,8 +620,6 @@ footer {
                 <th class="sortable-th" data-sort="status">Status<span class="sort-arrow"></span></th>
                 <th class="sortable-th" data-sort="shirt_size">Shirt Size<span class="sort-arrow"></span></th>
                 <th class="sortable-th" data-sort="computed_hours">Estimated Hours<span class="sort-arrow"></span></th>
-                <th class="sortable-th" data-sort="start_date">Start Date<span class="sort-arrow"></span></th>
-                <th class="sortable-th" data-sort="end_date">End Date<span class="sort-arrow"></span></th>
                 <th class="sortable-th" data-sort="created_at">Created<span class="sort-arrow"></span></th>
                 <th class="sortable-th" data-sort="updated_at">Updated<span class="sort-arrow"></span></th>
                 <th></th>

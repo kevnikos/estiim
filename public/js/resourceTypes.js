@@ -16,7 +16,7 @@ export async function loadRT() {
 
     const tbody = document.querySelector('#rt-table tbody');
     tbody.innerHTML = '';
-    const itemsToDisplay = filteredResourceTypes.slice(0, window.userPreferences.maxResourceTypes);
+    const itemsToDisplay = filteredResourceTypes;
     itemsToDisplay.forEach(r => {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${r.name}</td><td>${r.description || ''}</td><td><button onclick="window.editRT('${r.id}')">Edit</button><button onclick="window.delRT('${r.id}')" style="background:var(--red)">Del</button></td>`;
