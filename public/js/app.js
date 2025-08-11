@@ -83,12 +83,26 @@ window.show = function(hash) {
   }
 }
 
+// --- Branding ---
+// Update header and page title based on enableBranding preference
+window.applyBranding = function() {
+  const brandingEnabled = window.userPreferences.enableBranding !== false;
+  // Update header text
+  const headerTitle = document.querySelector('#main-header h1');
+  if (headerTitle) {
+    headerTitle.textContent = brandingEnabled ? 'Estiim' : 'Home';
+  }
+  // Update page title
+  document.title = brandingEnabled ? 'Estiim – T-Shirt Estimator' : 'EST';
+};
+
 // --- Initialization ---
 // This is the main entry point when the page is loaded.
 window.addEventListener('DOMContentLoaded', async () => { 
     // 1. Load user preferences from cookies first.
     window.loadPreferences(); 
-    window.populatePrefsPage(); // Populate preferences after loading them
+    window.populatePrefsPage();
+    window.applyBranding(); // Apply branding on load
 
     // 2. Initialize dropdown options
     await window.initDropdownOptions();

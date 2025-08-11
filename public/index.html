@@ -723,10 +723,7 @@ footer {
 <section id="prefs">
     <div class="card flex" style="justify-content:space-between;align-items:center;">
         <h2>Preferences</h2>
-        <div>
-            <button onclick="window.savePreferences()">Save</button>
-            <button onclick="window.populatePrefsPage()" style="background:var(--border);color:var(--text)">Cancel</button>
-        </div>
+        <!-- Removed duplicate Save/Cancel buttons from top of Prefs page -->
     </div>
     
     <!-- Dropdown Options Management -->
@@ -773,8 +770,19 @@ footer {
             </div>
         </div>
     </div>
-</section>
 
+    <!-- New section for general preferences -->
+    <div class="card" id="prefs-card">
+        <h3>General Preferences</h3>
+        <label style="display:block;margin-top:16px;">
+            <input type="checkbox" id="branding-checkbox"> Enable logos and branding
+        </label>
+    </div>
+    <div style="text-align:right;margin:32px 0 0 0;">
+        <button onclick="window.savePreferences()">Save</button>
+        <button onclick="window.populatePrefsPage()" style="background:var(--border);color:var(--text)">Cancel</button>
+    </div>
+</section>
 
 <!-- Modals -->
 <div id="modal-init" class="modal-overlay"><div class="modal">

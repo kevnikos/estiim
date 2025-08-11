@@ -12,11 +12,17 @@ export function loadPreferences() {
         try {
             const parsedPrefs = JSON.parse(prefsCookie);
             window.userPreferences = {
-                initiativeStatusFilter: parsedPrefs.initiativeStatusFilter || '' // New: default to all
+                initiativeStatusFilter: parsedPrefs.initiativeStatusFilter || '', // New: default to all
+                enableBranding: parsedPrefs.enableBranding !== false // default true
             };
         } catch (e) {
             console.error("Error parsing preferences cookie:", e);
         }
+    } else {
+        window.userPreferences = {
+            initiativeStatusFilter: '',
+            enableBranding: true
+        };
     }
 }
 
@@ -25,10 +31,12 @@ export function loadPreferences() {
  */
 export function savePreferences() {
     window.userPreferences.initiativeStatusFilter = document.getElementById('init-status-filter').value; // Save the status filter
+    window.userPreferences.enableBranding = document.getElementById('branding-checkbox').checked;
 
     setCookie('estiim_prefs', JSON.stringify(window.userPreferences), 365);
     window.showMessage('Success', 'Preferences saved successfully!', 'success');
     window.loadInitiatives(window.currentSortColumn, window.currentSortDirection);
+    window.applyBranding();
 }
 
 /**
@@ -39,6 +47,10 @@ export function populatePrefsPage() {
     const statusFilterDropdown = document.getElementById('init-status-filter');
     if (statusFilterDropdown) {
         statusFilterDropdown.value = window.userPreferences.initiativeStatusFilter;
+    }
+    const brandingCheckbox = document.getElementById('branding-checkbox');
+    if (brandingCheckbox) {
+        brandingCheckbox.checked = window.userPreferences.enableBranding !== false;
     }
 }
 
