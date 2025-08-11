@@ -14,7 +14,8 @@ export function loadPreferences() {
             window.userPreferences = {
                 maxInitiatives: parsedPrefs.maxInitiatives || 8,
                 maxResourceTypes: parsedPrefs.maxResourceTypes || 5,
-                maxEstimationFactors: parsedPrefs.maxEstimationFactors || 5
+                maxEstimationFactors: parsedPrefs.maxEstimationFactors || 5,
+                initiativeStatusFilter: parsedPrefs.initiativeStatusFilter || '' // New: default to all
             };
         } catch (e) {
             console.error("Error parsing preferences cookie:", e);
@@ -29,6 +30,7 @@ export function savePreferences() {
     window.userPreferences.maxInitiatives = parseInt(document.getElementById('pref-max-initiatives').value, 10) || 8;
     window.userPreferences.maxResourceTypes = parseInt(document.getElementById('pref-max-resource-types').value, 10) || 5;
     window.userPreferences.maxEstimationFactors = parseInt(document.getElementById('pref-max-estimation-factors').value, 10) || 5;
+    window.userPreferences.initiativeStatusFilter = document.getElementById('init-status-filter').value; // Save the status filter
 
     setCookie('estiim_prefs', JSON.stringify(window.userPreferences), 365);
     window.showMessage('Success', 'Preferences saved successfully!', 'success');
@@ -46,6 +48,11 @@ export function populatePrefsPage() {
     document.getElementById('pref-max-initiatives').value = window.userPreferences.maxInitiatives;
     document.getElementById('pref-max-resource-types').value = window.userPreferences.maxResourceTypes;
     document.getElementById('pref-max-estimation-factors').value = window.userPreferences.maxEstimationFactors;
+    // Set the status filter dropdown value
+    const statusFilterDropdown = document.getElementById('init-status-filter');
+    if (statusFilterDropdown) {
+        statusFilterDropdown.value = window.userPreferences.initiativeStatusFilter;
+    }
 }
 
 // --- Cookie Helper Functions ---

@@ -36,7 +36,16 @@ export default function createInitiativesRouter(db) {
 
   // GET /api/initiatives
   router.get('/', async (req, res) => {
-    const rows = await db.all('SELECT * FROM initiatives');
+    const { status } = req.query; // Get status from query parameters
+    let query = 'SELECT * FROM initiatives';
+    let params = [];
+
+    if (status) {
+      query += ' WHERE status = ?';
+      params.push(status);
+    }
+
+    const rows = await db.all(query, params);
     res.json(rows.map(parseInitiativeRow));
   });
 

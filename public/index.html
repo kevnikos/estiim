@@ -87,6 +87,54 @@ footer {
     font-size: 12px;
 }
 
+/* Styles for dropdown options management in preferences */
+.dropdown-options-section {
+    margin-bottom: 24px;
+}
+
+.dropdown-options-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.dropdown-options-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-width: 100px;
+}
+
+#status-options-list,
+#type-options-list,
+#priority-options-list {
+    font-size: 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px;
+}
+
+#status-options-list option,
+#type-options-list option,
+#priority-options-list option {
+    padding: 8px;
+    cursor: pointer;
+}
+
+#status-options-list option:hover,
+#type-options-list option:hover,
+#priority-options-list option:hover {
+    background-color: var(--bg);
+}
+
+/* Card title styles */
+.card h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+}
+
 /* Removed absolute positioning from .factor-calc. It will now be a child of the modal content. */
 /* Renamed .factor-calc to .factor-summary-box and applied blue styling */
 .factor-summary-box {
@@ -595,6 +643,9 @@ footer {
     <div class="flex">
         <!-- New search input for the main initiatives page -->
         <input type="text" id="init-search-input" class="main-page-search-input" placeholder="Search initiatives..." oninput="window.loadInitiatives(currentSortColumn, currentSortDirection)">
+        <select id="init-status-filter" onchange="window.loadInitiatives(currentSortColumn, currentSortDirection)">
+            <option value="">All Statuses</option>
+        </select>
         <button onclick="window.addInitiative()">+ Add Initiative</button>
         <button class="export-button" onclick="window.exportInitiatives()">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> Export
@@ -678,6 +729,7 @@ footer {
         </div>
     </div>
     <div class="card">
+        <h3>Display Limits</h3>
         <p>Configure display limits for lists:</p>
         <div style="margin-bottom: 12px;">
             <label for="pref-max-initiatives" style="display: inline-block; width: 180px;">Max Visible Initiatives:</label>
@@ -690,6 +742,51 @@ footer {
         <div>
             <label for="pref-max-estimation-factors" style="display: inline-block; width: 180px;">Max Visible Estimation Factors:</label>
             <input type="number" id="pref-max-estimation-factors" min="1" value="5">
+        </div>
+    </div>
+    
+    <!-- Dropdown Options Management -->
+    <div class="card">
+        <h3>Dropdown Options</h3>
+        <p>Manage options for initiative dropdowns:</p>
+        
+        <!-- Status Options -->
+        <div class="dropdown-options-section">
+            <h4>Status Options</h4>
+            <div class="flex" style="margin-bottom: 12px;">
+                <select id="status-options-list" size="6" style="flex: 1; min-height: 150px;"></select>
+                <div class="dropdown-options-controls">
+                    <button onclick="window.addDropdownOption('status')" style="width: 100%; margin-bottom: 8px;">Add</button>
+                    <button onclick="window.editDropdownOption('status')" style="width: 100%; margin-bottom: 8px; background: var(--blue);">Edit</button>
+                    <button onclick="window.removeDropdownOption('status')" style="width: 100%; background: var(--red);">Remove</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Type Options -->
+        <div class="dropdown-options-section">
+            <h4>Estimation Type Options</h4>
+            <div class="flex" style="margin-bottom: 12px;">
+                <select id="type-options-list" size="6" style="flex: 1; min-height: 150px;"></select>
+                <div class="dropdown-options-controls">
+                    <button onclick="window.addDropdownOption('type')" style="width: 100%; margin-bottom: 8px;">Add</button>
+                    <button onclick="window.editDropdownOption('type')" style="width: 100%; margin-bottom: 8px; background: var(--blue);">Edit</button>
+                    <button onclick="window.removeDropdownOption('type')" style="width: 100%; background: var(--red);">Remove</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Priority Options -->
+        <div class="dropdown-options-section">
+            <h4>Priority Options</h4>
+            <div class="flex" style="margin-bottom: 12px;">
+                <select id="priority-options-list" size="6" style="flex: 1; min-height: 150px;"></select>
+                <div class="dropdown-options-controls">
+                    <button onclick="window.addDropdownOption('priority')" style="width: 100%; margin-bottom: 8px;">Add</button>
+                    <button onclick="window.editDropdownOption('priority')" style="width: 100%; margin-bottom: 8px; background: var(--blue);">Edit</button>
+                    <button onclick="window.removeDropdownOption('priority')" style="width: 100%; background: var(--red);">Remove</button>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -705,7 +802,24 @@ footer {
         <div class="initiative-details-left">
             <div class="flex"><input id="init-name" placeholder="Name" style="flex:1"><input id="init-custom-id" placeholder="User-Defined ID" style="flex:1"></div>
             <textarea id="init-desc" placeholder="Description" style="width:100%;margin-top:12px"></textarea>
-            <div class="flex" style="margin-top:12px"><div><label>Priority</label><br><select id="init-priority"><option>Low</option><option>Medium</option><option>High</option></select></div><div><label>Pri #</label><br><input id="init-priority-num" type="number" min="1" max="10"></div><div><label>Status</label><br><select id="init-status"><option>Accepted</option><option>Draft</option><option>Done</option><option>Estimated</option><option>Hold</option><option>Not Required</option><option>Partial</option><option>Rejected</option><option>Re-Estimation</option><option>To Do</option></select></div><div><label>Estimation Type</label><br><select id="init-estimation-type"><option>E4E</option><option>High</option><option>Low</option><option>Medium</option><option>WAG</option></select></div></div>
+            <div class="flex" style="margin-top:12px">
+                <div>
+                    <label>Priority</label><br>
+                    <select id="init-priority"></select>
+                </div>
+                <div>
+                    <label>Pri #</label><br>
+                    <input id="init-priority-num" type="number" min="1" max="10">
+                </div>
+                <div>
+                    <label>Status</label><br>
+                    <select id="init-status"></select>
+                </div>
+                <div>
+                    <label>Estimation Type</label><br>
+                    <select id="init-estimation-type"></select>
+                </div>
+            </div>
             <div class="flex" style="margin-top:12px"><div><label>Start Date</label><br><input id="init-start-date" type="date"></div><div><label>End Date</label><br><input id="init-end-date" type="date"></div></div>
             <textarea id="init-scope" placeholder="In Scope" style="width:100%;margin-top:12px"></textarea>
             <textarea id="init-out" placeholder="Out of Scope" style="width:100%;margin-top:12px"></textarea>

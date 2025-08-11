@@ -15,6 +15,7 @@ import createInitiativesRouter from './routes/initiatives.js';
 import createEstimationFactorsRouter from './routes/estimationFactors.js';
 import createResourceTypesRouter from './routes/resourceTypes.js';
 import createShirtSizesRouter from './routes/shirtSizes.js';
+import createDropdownOptionsRouter from './routes/dropdownOptions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,12 +44,14 @@ async function createApp() {
   const estimationFactorsRouter = createEstimationFactorsRouter(db);
   const resourceTypesRouter = createResourceTypesRouter(db);
   const shirtSizesRouter = createShirtSizesRouter(db);
+  const dropdownOptionsRouter = createDropdownOptionsRouter(db);
 
   // Mount the routers
   app.use('/api/initiatives', initiativesRouter);
   app.use('/api/estimation-factors', estimationFactorsRouter);
   app.use('/api/resource-types', resourceTypesRouter);
   app.use('/api/shirt-sizes', shirtSizesRouter);
+  app.use('/api/dropdown-options', dropdownOptionsRouter);
 
   // Serve the main HTML file for any other route
   app.get('*', (req, res) => {

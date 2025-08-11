@@ -79,6 +79,14 @@ export async function initializeDatabase() {
       threshold_hours REAL NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS dropdown_options (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      category TEXT NOT NULL,
+      value TEXT NOT NULL,
+      created_at TEXT,
+      UNIQUE(category, value)
+    );
+
     CREATE TABLE IF NOT EXISTS shirt_size_audit (
       id TEXT PRIMARY KEY,
       action TEXT NOT NULL,
@@ -98,6 +106,60 @@ export async function initializeDatabase() {
     await db.run('INSERT INTO shirt_sizes (size, threshold_hours) VALUES (?, ?)', ['XL', 320]);
     await db.run('INSERT INTO shirt_sizes (size, threshold_hours) VALUES (?, ?)', ['XXL', 640]);
     console.log('INFO: Default shirt sizes seeded.');
+  }
+
+  // Seed default dropdown options if none exist
+  const existingOptions = await db.all('SELECT * FROM dropdown_options');
+  if (existingOptions.length === 0) {
+    // Status options
+    const defaultStatuses = [
+      'Accepted',
+      'Draft',
+      'Done',
+      'Estimated',
+      'Hold',
+      'Not Required',
+      'Partial',
+      'Rejected',
+      'Re-Estimation',
+      'To Do'
+    ];
+    for (const status of defaultStatuses) {
+      await db.run(
+        'INSERT INTO dropdown_options (category, value, created_at) VALUES (?, ?, datetime())',
+        'status', status
+      );
+    }
+
+    // Estimation type options
+    const defaultTypes = [
+      'E4E',
+      'High',
+      'Medium',
+      'Low',
+      'WAG'
+    ];
+    for (const type of defaultTypes) {
+      await db.run(
+        'INSERT INTO dropdown_options (category, value, created_at) VALUES (?, ?, datetime())',
+        'type', type
+      );
+    }
+
+    // Priority options
+    const defaultPriorities = [
+      'High',
+      'Medium',
+      'Low'
+    ];
+    for (const priority of defaultPriorities) {
+      await db.run(
+        'INSERT INTO dropdown_options (category, value, created_at) VALUES (?, ?, datetime())',
+        'priority', priority
+      );
+    }
+
+    console.log('INFO: Default dropdown options seeded.');
   }
 
   return db;

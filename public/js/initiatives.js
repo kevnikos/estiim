@@ -3,6 +3,48 @@
  * Handles all CRUD operations, event handling, and UI rendering for the Initiatives section.
  */
 import { formatDateInEST } from './ui.js';
+// Cookie utility functions
+function setCookie(name, value, days) {
+    let expires = "";
+    if (days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days*24*60*60*1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for(let i=0;i < ca.length;i++) {
+        let c = ca[i];
+        while (c.charAt(0)==' ') c = c.substring(1,c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+    }
+    return null;
+}
+
+// Handle status filter persistence and setup
+export function initStatusFilter() {
+    const statusFilter = document.getElementById('init-status-filter');
+    if (!statusFilter) return;
+
+    // Set up the change handler (only once)
+    if (!statusFilter.hasChangeListener) {
+        statusFilter.hasChangeListener = true;
+        statusFilter.addEventListener('change', (e) => {
+            setCookie('initiatives_status', e.target.value, 30);
+            window.loadInitiatives(window.currentSortColumn, window.currentSortDirection);
+        });
+    }
+
+    // Restore saved value
+    const savedStatus = getCookie('initiatives_status');
+    if (savedStatus !== null) {
+        statusFilter.value = savedStatus;
+    }
+}
 
 /**
  * Loads and displays the list of initiatives, with filtering and sorting.
@@ -10,19 +52,22 @@ import { formatDateInEST } from './ui.js';
  * @param {string} [sortDirection='desc'] - The direction to sort ('asc' or 'desc').
  */
 export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'desc') {
-  const res = await fetch(window.API + '/api/initiatives');
+    const statusFilterElem = document.getElementById('init-status-filter');
+    let statusFilter = '';
+    if (statusFilterElem) {
+        statusFilter = statusFilterElem.value || '';
+    }
+  let url = window.API + '/api/initiatives';
+  if (statusFilter) {
+    url += `?status=${encodeURIComponent(statusFilter)}`;
+  }
+  const res = await fetch(url);
   let allInitiatives = await res.json();
-  window.initList = allInitiatives;
+  window.initList = allInitiatives; // Still store all initiatives for other uses like edit
 
-  const searchQuery = document.getElementById('init-search-input')?.value.toLowerCase() || '';
-
-  let filteredInitiatives = allInitiatives.filter(i => 
-    i.name.toLowerCase().includes(searchQuery) || 
-    (i.custom_id && i.custom_id.toLowerCase().includes(searchQuery)) ||
-    (i.description && i.description.toLowerCase().includes(searchQuery))
-  );
-
-  filteredInitiatives.sort((a, b) => {
+  // No client-side filtering here, as filtering is done on the backend.
+  // However, sorting is still done client-side.
+  allInitiatives.sort((a, b) => {
     let valA = a[sortBy];
     let valB = b[sortBy];
     if (sortBy === 'id' || sortBy === 'computed_hours' || sortBy === 'priority_num') {
@@ -42,7 +87,7 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
 
   const tbody = document.querySelector('#init-table tbody');
   tbody.innerHTML = '';
-  const itemsToDisplay = filteredInitiatives;
+  const itemsToDisplay = allInitiatives; // Directly use all initiatives from the backend
 
   itemsToDisplay.forEach(i => {
     const tr = document.createElement('tr');

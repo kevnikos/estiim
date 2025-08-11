@@ -12,6 +12,7 @@ import * as factorPicker from './factorPicker.js';
 import * as resourceTypes from './resourceTypes.js';
 import * as shirtSizes from './shirtSizes.js';
 import * as preferences from './preferences.js';
+import * as dropdownOptions from './dropdownOptions.js';
 
 // --- Global State ---
 // This section defines variables that are used across different modules.
@@ -46,6 +47,7 @@ Object.assign(window, factorPicker);
 Object.assign(window, resourceTypes);
 Object.assign(window, shirtSizes);
 Object.assign(window, preferences);
+Object.assign(window, dropdownOptions);
 
 // --- Navigation ---
 // The main navigation function for showing/hiding sections.
@@ -65,7 +67,11 @@ window.show = function(hash) {
   }
 
   // Load data for the shown section
-  if (id === 'home') window.loadInitiatives(window.currentSortColumn, window.currentSortDirection);
+  if (id === 'home') {
+    window.populatePrefsPage(); // Ensure preferences are loaded into the UI before loading initiatives
+    window.initStatusFilter(); // Initialize/restore the status filter
+    window.loadInitiatives(window.currentSortColumn, window.currentSortDirection);
+  }
   if (id === 'factors') {
     window.loadRT().then(window.loadEF);
   }
@@ -81,19 +87,23 @@ window.show = function(hash) {
 
 // --- Initialization ---
 // This is the main entry point when the page is loaded.
-window.addEventListener('DOMContentLoaded', () => { 
+window.addEventListener('DOMContentLoaded', async () => { 
     // 1. Load user preferences from cookies first.
     window.loadPreferences(); 
-    
-    // 2. Load foundational data (Resource Types, then Estimation Factors).
+    window.populatePrefsPage(); // Populate preferences after loading them
+
+    // 2. Initialize dropdown options
+    await window.initDropdownOptions();
+
+    // 3. Load foundational data (Resource Types, then Estimation Factors).
     window.loadRT().then(() => { 
         window.loadEF(); 
     }); 
-    
-    // 3. Load the main initiatives table.
+
+    // 4. Load the main initiatives table.
     window.loadInitiatives(); 
     
-    // 4. Set up routing based on the URL hash.
+    // 5. Set up routing based on the URL hash.
     window.addEventListener('hashchange', () => window.show(location.hash));
     // Also handle initial page load
     if(location.hash) {
