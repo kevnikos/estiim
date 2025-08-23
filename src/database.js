@@ -6,6 +6,7 @@ import { open } from 'sqlite';
 import sqlite3 from 'sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import { 
   initMigrationsTable, 
   getCurrentVersion,
@@ -23,8 +24,25 @@ import * as categoriesMigration from './migrations/20250823000007_add_categories
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Define database file path
-const DB_FILE_PATH = path.join(__dirname, 'estiim.db');
+// Determine the database file path based on environment
+const getDbPath = () => {
+  // If running in Docker (can be set in docker-compose.yml or Dockerfile)
+  if (process.env.DOCKER_ENV === 'true') {
+    return path.join(__dirname, 'data', 'estiim.db');
+  }
+  // Default path for local development
+  return path.join(__dirname, 'estiim.db');
+};
+
+const DB_FILE_PATH = getDbPath();
+
+// Create data directory if it doesn't exist when in Docker
+if (process.env.DOCKER_ENV === 'true') {
+  const dataDir = path.join(__dirname, 'data');
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+}
 
 // Define all migrations in order
 const migrations = [

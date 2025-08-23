@@ -11,3 +11,5 @@ services:
     # This links the './data' directory on your machine to the '/app/src/data' directory in the container
     volumes:
       - ./data:/app/src/data
+    environment:
+      - DOCKER_ENV=true
