@@ -698,7 +698,10 @@ footer {
 
 <section id="home" class="active">
   <div class="card flex" style="justify-content:space-between;align-items:center;">
-    <h2>Initiatives</h2>
+    <div class="flex" style="align-items:baseline;gap:16px;">
+        <h2>Initiatives</h2>
+        <span id="init-count" style="color:#666;">0 initiatives shown</span>
+    </div>
     <div class="flex">
         <!-- New search input for the main initiatives page -->
         <input type="text" id="init-search-input" class="main-page-search-input" placeholder="Search initiatives..." oninput="window.loadInitiatives(currentSortColumn, currentSortDirection)">
@@ -730,6 +733,7 @@ footer {
                 <th class="sortable-th" data-sort="status">Status<span class="sort-arrow"></span></th>
                 <th class="sortable-th" data-sort="shirt_size">Shirt Size<span class="sort-arrow"></span></th>
                 <th class="sortable-th" data-sort="computed_hours">Estimated Hours<span class="sort-arrow"></span></th>
+                <th class="sortable-th" data-sort="estimated_duration">Est. Duration (mo)<span class="sort-arrow"></span></th>
                 <th class="sortable-th" data-sort="created_at">Created<span class="sort-arrow"></span></th>
                 <th class="sortable-th" data-sort="updated_at">Updated<span class="sort-arrow"></span></th>
                 <th></th>
@@ -919,6 +923,10 @@ footer {
                 <div>
                     <label>End Date</label><br>
                     <input id="init-end-date" type="date" style="width:130px">
+                </div>
+                <div>
+                    <label>Estimated Duration (months)</label><br>
+                    <input id="init-estimated-duration" type="number" min="1" max="99" style="width:80px">
                 </div>
             </div>
             <div class="flex" style="margin-top:12px">

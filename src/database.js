@@ -17,6 +17,7 @@ import * as efJournalMigration from './migrations/20250823000002_add_ef_journal_
 import * as shirtSizeAuditMigration from './migrations/20250823000003_add_shirt_size_audit.js';
 import * as dropdownCreatedAtMigration from './migrations/20250823000004_add_dropdown_options_created_at.js';
 import * as systemSettingsMigration from './migrations/20250823000005_add_system_settings.js';
+import * as estimatedDurationMigration from './migrations/20250823000006_add_estimated_duration.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,7 +31,8 @@ const migrations = [
   efJournalMigration,
   shirtSizeAuditMigration,
   dropdownCreatedAtMigration,
-  systemSettingsMigration
+  systemSettingsMigration,
+  estimatedDurationMigration
 ];
 
 /**
@@ -84,6 +86,7 @@ export async function initializeDatabase() {
       journal_entries TEXT,
       start_date TEXT,
       end_date TEXT,
+      estimated_duration INTEGER,
       created_at TEXT,
       updated_at TEXT
     );
@@ -131,6 +134,14 @@ export async function initializeDatabase() {
       old_data TEXT,
       new_data TEXT,
       timestamp TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      table_name TEXT NOT NULL,
+      action TEXT NOT NULL,
+      details TEXT,
+      timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
   `);
 

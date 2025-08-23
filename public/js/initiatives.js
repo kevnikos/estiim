@@ -11,6 +11,12 @@ function setCookie(name, value, days) {
         date.setTime(date.getTime() + (days*24*60*60*1000));
         expires = "; expires=" + date.toUTCString();
     }
+    document.cookie = name + "=" + (value || "") + expires + "; path=/";
+    if (days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days*24*60*60*1000));
+        expires = "; expires=" + date.toUTCString();
+    }
     document.cookie = name + "=" + (value || "")  + expires + "; path=/";
 }
 
@@ -53,10 +59,17 @@ export function initStatusFilter() {
  */
 export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'desc') {
     const statusFilterElem = document.getElementById('init-status-filter');
+    const searchInput = document.getElementById('init-search-input');
     let statusFilter = '';
+    let searchText = '';
+    
     if (statusFilterElem) {
         statusFilter = statusFilterElem.value || '';
     }
+    if (searchInput) {
+        searchText = searchInput.value.toLowerCase().trim();
+    }
+
   let url = window.API + '/api/initiatives';
   if (statusFilter) {
     url += `?status=${encodeURIComponent(statusFilter)}`;
@@ -65,8 +78,24 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
   let allInitiatives = await res.json();
   window.initList = allInitiatives; // Still store all initiatives for other uses like edit
 
-  // No client-side filtering here, as filtering is done on the backend.
-  // However, sorting is still done client-side.
+  // Apply search filter if there's search text
+  if (searchText) {
+    allInitiatives = allInitiatives.filter(initiative => {
+      return (
+        (initiative.name || '').toLowerCase().includes(searchText) ||
+        (initiative.custom_id || '').toLowerCase().includes(searchText) ||
+        (initiative.description || '').toLowerCase().includes(searchText) ||
+        (initiative.status || '').toLowerCase().includes(searchText) ||
+        (initiative.estimation_type || '').toLowerCase().includes(searchText) ||
+        (initiative.priority || '').toLowerCase().includes(searchText) ||
+        String(initiative.priority_num || '').includes(searchText) ||
+        String(initiative.computed_hours || '').includes(searchText) ||
+        String(initiative.estimated_duration || '').includes(searchText)
+      );
+    });
+  }
+
+  // Sort the filtered initiatives
   allInitiatives.sort((a, b) => {
     let valA = a[sortBy];
     let valB = b[sortBy];
@@ -89,6 +118,10 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
   tbody.innerHTML = '';
   const itemsToDisplay = allInitiatives; // Directly use all initiatives from the backend
 
+  // Update the count display
+  const countElement = document.getElementById('init-count');
+  countElement.textContent = `${itemsToDisplay.length} initiative${itemsToDisplay.length !== 1 ? 's' : ''} shown`;
+
   itemsToDisplay.forEach(i => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -100,6 +133,7 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
       <td>${i.status || ''}</td>
       <td>${i.shirt_size || ''}</td>
       <td>${i.computed_hours || 0}</td>
+      <td>${i.estimated_duration || ''}</td>
       <td>${formatDateInEST(i.created_at, true)}</td>
       <td>${formatDateInEST(i.updated_at, true)}</td>
       <td style="white-space:nowrap;">
@@ -128,6 +162,7 @@ export function addInitiative() {
     document.getElementById('init-estimation-type').value = 'WAG';
     document.getElementById('init-start-date').value = '';
     document.getElementById('init-end-date').value = '';
+    document.getElementById('init-estimated-duration').value = '';
     document.getElementById('init-scope').value = '';
     document.getElementById('init-out').value = '';
     document.getElementById('init-created').textContent = '';
@@ -163,6 +198,7 @@ export function editInitiative(id) {
     document.getElementById('init-estimation-type').value = init.estimation_type || 'WAG';
     document.getElementById('init-start-date').value = init.start_date ? init.start_date.substring(0, 10) : '';
     document.getElementById('init-end-date').value = init.end_date ? init.end_date.substring(0, 10) : '';
+    document.getElementById('init-estimated-duration').value = init.estimated_duration !== null ? init.estimated_duration : '';
     document.getElementById('init-scope').value = init.scope || '';
     document.getElementById('init-out').value = init.out_of_scope || '';
     document.getElementById('init-created').textContent = formatDateInEST(init.created_at);
@@ -212,6 +248,7 @@ export async function saveInitiative() {
         selected_factors: window.selectedFactors,
         start_date: document.getElementById('init-start-date').value.trim() || null,
         end_date: document.getElementById('init-end-date').value.trim() || null,
+        estimated_duration: parseInt(document.getElementById('init-estimated-duration').value, 10) || null,
         journal_entries: window.currentInitiativeJournal
     }; 
     
@@ -263,6 +300,7 @@ export async function duplicateInitiative() {
         selected_factors: window.selectedFactors,
         start_date: document.getElementById('init-start-date').value.trim() || null,
         end_date: document.getElementById('init-end-date').value.trim() || null,
+        estimated_duration: parseInt(document.getElementById('init-estimated-duration').value, 10) || null,
         journal_entries: [newJournalEntry]
     };
 
@@ -634,7 +672,7 @@ function getAuditDiffs(oldData, newData) {
     const keysToCompare = [
         'name', 'custom_id', 'description', 'priority', 'priority_num',
         'status', 'estimation_type', 'classification', 'scope', 'out_of_scope',
-        'computed_hours', 'shirt_size', 'start_date', 'end_date'
+        'computed_hours', 'shirt_size', 'start_date', 'end_date', 'estimated_duration'
     ];
 
     for (const key of keysToCompare) {
@@ -644,10 +682,16 @@ function getAuditDiffs(oldData, newData) {
             const oldDate = (oldValue || '').substring(0, 10);
             const newDate = (newValue || '').substring(0, 10);
             if (oldDate !== newDate) {
-                diffs.push(`- Changed ${key} from <span class="diff-removed">${oldDate || 'none'}</span> to <span class="diff-added">${newDate || 'none'}</span>`);
+                diffs.push(`- Changed ${key.replace(/_/g, ' ')} from <span class="diff-removed">${oldDate || 'none'}</span> to <span class="diff-added">${newDate || 'none'}</span>`);
+            }
+        } else if (key === 'estimated_duration' || key === 'priority_num' || key === 'computed_hours') {
+            const oldNum = oldValue !== null ? oldValue : '';
+            const newNum = newValue !== null ? newValue : '';
+            if (oldNum !== newNum) {
+                diffs.push(`- Changed ${key.replace(/_/g, ' ')} from <span class="diff-removed">${oldNum || 'none'}</span> to <span class="diff-added">${newNum || 'none'}</span>`);
             }
         } else if (String(oldValue || '') !== String(newValue || '')) {
-            diffs.push(`- Changed ${key} from <span class="diff-removed">${oldValue || 'empty'}</span> to <span class="diff-added">${newValue || 'empty'}</span>`);
+            diffs.push(`- Changed ${key.replace(/_/g, ' ')} from <span class="diff-removed">${oldValue || 'empty'}</span> to <span class="diff-added">${newValue || 'empty'}</span>`);
         }
     }
     

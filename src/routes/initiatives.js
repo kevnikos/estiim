@@ -149,7 +149,7 @@ export default function createInitiativesRouter(db) {
       const {
         name, custom_id, description, priority, priority_num, status, estimation_type,
         classification, scope, out_of_scope, selected_factors, journal_entries,
-        start_date, end_date
+        start_date, end_date, estimated_duration
       } = req.body;
 
       let computedHours = 0;
@@ -172,7 +172,8 @@ export default function createInitiativesRouter(db) {
         computed_hours: computedHours.toFixed(1),
         shirt_size: shirtSize,
         start_date: start_date || null,
-        end_date: end_date || null
+        end_date: end_date || null,
+        estimated_duration: estimated_duration || null
       };
 
       const auditEntry = {
@@ -183,14 +184,14 @@ export default function createInitiativesRouter(db) {
       newJournalEntries.push(auditEntry);
 
       const result = await db.run(
-        `INSERT INTO initiatives (name, custom_id, description, priority, priority_num, status, estimation_type, classification, scope, out_of_scope, selected_factors, computed_hours, shirt_size, journal_entries, start_date, end_date, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO initiatives (name, custom_id, description, priority, priority_num, status, estimation_type, classification, scope, out_of_scope, selected_factors, computed_hours, shirt_size, journal_entries, start_date, end_date, estimated_duration, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           name, custom_id, description, priority, priority_num, status, estimation_type,
           classification, scope, out_of_scope,
           JSON.stringify(selected_factors || []),
           computedHours, shirtSize, JSON.stringify(newJournalEntries),
-          start_date, end_date, now, now
+          start_date, end_date, estimated_duration, now, now
         ]
       );
       const newInitiative = await db.get('SELECT * FROM initiatives WHERE id = ?', [result.lastID]);
@@ -212,7 +213,7 @@ export default function createInitiativesRouter(db) {
         const {
             name, custom_id, description, priority, priority_num, status, estimation_type,
             classification, scope, out_of_scope, selected_factors, journal_entries,
-            start_date, end_date
+            start_date, end_date, estimated_duration
         } = req.body;
 
         const oldInitiative = await db.get('SELECT * FROM initiatives WHERE id = ?', [id]);
@@ -241,6 +242,7 @@ export default function createInitiativesRouter(db) {
             shirt_size: newShirtSize,
             start_date: start_date || null,
             end_date: end_date || null,
+            estimated_duration: estimated_duration || null,
             updated_at: now
         };
 
@@ -258,7 +260,8 @@ export default function createInitiativesRouter(db) {
             computed_hours: parseFloat(oldInitiative.computed_hours || 0).toFixed(1),
             shirt_size: oldInitiative.shirt_size,
             start_date: oldInitiative.start_date || null,
-            end_date: oldInitiative.end_date || null
+            end_date: oldInitiative.end_date || null,
+            estimated_duration: oldInitiative.estimated_duration !== null ? oldInitiative.estimated_duration : null
         };
         const newDataForAudit = {
             name, custom_id, description, priority, priority_num, status, estimation_type,
@@ -267,7 +270,8 @@ export default function createInitiativesRouter(db) {
             computed_hours: newComputedHours.toFixed(1),
             shirt_size: newShirtSize,
             start_date: start_date || null,
-            end_date: end_date || null
+            end_date: end_date || null,
+            estimated_duration: estimated_duration || null
         };
         
         if (JSON.stringify(oldDataForAudit) !== JSON.stringify(newDataForAudit)) {
