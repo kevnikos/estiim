@@ -58,6 +58,17 @@ export async function savePreferences() {
  * Populates the preferences form with the current settings.
  */
 export function populatePrefsPage() {
+    // Ensure we have the preferences content container
+    let prefsContent = document.getElementById('preferences-content');
+    if (!prefsContent) {
+        const prefsSection = document.getElementById('prefs');
+        if (prefsSection) {
+            prefsContent = document.createElement('div');
+            prefsContent.id = 'preferences-content';
+            prefsSection.appendChild(prefsContent);
+        }
+    }
+
     // Set the status filter dropdown value
     const statusFilterDropdown = document.getElementById('init-status-filter');
     if (statusFilterDropdown) {

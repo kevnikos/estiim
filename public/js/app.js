@@ -13,6 +13,7 @@ import * as resourceTypes from './resourceTypes.js';
 import * as shirtSizes from './shirtSizes.js';
 import * as preferences from './preferences.js';
 import * as dropdownOptions from './dropdownOptions.js';
+import * as categories from './categories.js';
 
 // --- Global State ---
 // This section defines variables that are used across different modules.
@@ -20,6 +21,7 @@ import * as dropdownOptions from './dropdownOptions.js';
 // which minimizes changes to the original logic of the onclick handlers in the HTML.
 window.API = '';
 window.selectedFactors = [];
+window.selectedCategories = [];
 window.efList = [];
 window.rtList = [];
 window.shirtSizes = [];
@@ -46,6 +48,7 @@ Object.assign(window, resourceTypes);
 Object.assign(window, shirtSizes);
 Object.assign(window, preferences);
 Object.assign(window, dropdownOptions);
+Object.assign(window, categories);
 
 // --- Navigation ---
 // The main navigation function for showing/hiding sections.
@@ -74,7 +77,17 @@ window.show = function(hash) {
     window.loadRT().then(window.loadEF);
   }
   if (id === 'shirt-sizes') window.loadShirtSizes();
-  if (id === 'prefs') window.populatePrefsPage();
+  if (id === 'prefs') {
+    window.populatePrefsPage();
+    // Give the DOM time to update before initializing categories
+    setTimeout(async () => {
+      try {
+        await window.initCategoryManagement();
+      } catch (error) {
+        console.error('Error initializing categories:', error);
+      }
+    }, 100);
+  }
   
   // Close the flyout menu if it's open
   const flyoutMenu = document.getElementById('flyout-menu');

@@ -77,6 +77,7 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
   const res = await fetch(url);
   let allInitiatives = await res.json();
   window.initList = allInitiatives; // Still store all initiatives for other uses like edit
+  console.log('Loaded initiatives:', allInitiatives);
 
   // Apply search filter if there's search text
   if (searchText) {
@@ -90,7 +91,8 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
         (initiative.priority || '').toLowerCase().includes(searchText) ||
         String(initiative.priority_num || '').includes(searchText) ||
         String(initiative.computed_hours || '').includes(searchText) ||
-        String(initiative.estimated_duration || '').includes(searchText)
+        String(initiative.estimated_duration || '').includes(searchText) ||
+        (initiative.categories || []).some(cat => cat.toLowerCase().includes(searchText))
       );
     });
   }
@@ -115,33 +117,48 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
   });
 
   const tbody = document.querySelector('#init-table tbody');
+  if (!tbody) {
+    console.error('Could not find table body element');
+    return;
+  }
   tbody.innerHTML = '';
   const itemsToDisplay = allInitiatives; // Directly use all initiatives from the backend
+  console.log('Initiatives to display:', itemsToDisplay);
 
   // Update the count display
   const countElement = document.getElementById('init-count');
-  countElement.textContent = `${itemsToDisplay.length} initiative${itemsToDisplay.length !== 1 ? 's' : ''} shown`;
+  if (countElement) {
+    countElement.textContent = `${itemsToDisplay.length} initiative${itemsToDisplay.length !== 1 ? 's' : ''} shown`;
+  }
 
   itemsToDisplay.forEach(i => {
+    console.log('Creating row for initiative:', i);
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${i.id || ''}</td>
-      <td>${i.custom_id || ''}</td>
-      <td>${i.name}</td>
-      <td>${i.priority}</td>
-      <td>${i.estimation_type}</td>
-      <td>${i.status || ''}</td>
-      <td>${i.shirt_size || ''}</td>
-      <td>${i.computed_hours || 0}</td>
-      <td>${i.estimated_duration || ''}</td>
-      <td>${formatDateInEST(i.created_at, true)}</td>
-      <td>${formatDateInEST(i.updated_at, true)}</td>
-      <td style="white-space:nowrap;">
-        <button onclick="window.editInitiative(${i.id})">Edit</button>
-        <button onclick="window.deleteInitiative(${i.id})" style="background:var(--red)">Del</button>
-        <button onclick="window.showAuditTrail('${i.id}', '${i.name}')">🔍</button>
-      </td>`;
-    tbody.appendChild(tr);
+    try {
+      tr.innerHTML = `
+        <td>${i.id || ''}</td>
+        <td>${i.custom_id || ''}</td>
+        <td>${i.name}</td>
+        <td>${i.priority}</td>
+        <td>${i.estimation_type}</td>
+        <td>${i.status || ''}</td>
+        <td>${i.shirt_size || ''}</td>
+        <td>${i.computed_hours || 0}</td>
+        <td>${i.estimated_duration || ''}</td>
+        <td>${(typeof i.categories === 'string' ? JSON.parse(i.categories || '[]') : (i.categories || [])).map(cat => `<span class="category-tag">${cat}</span>`).join('')}</td>
+        <td>${formatDateInEST(i.created_at, true)}</td>
+        <td>${formatDateInEST(i.updated_at, true)}</td>
+        <td style="white-space:nowrap;">
+          <button onclick="window.editInitiative(${i.id})">Edit</button>
+          <button onclick="window.deleteInitiative(${i.id})" style="background:var(--red)">Del</button>
+          <button onclick="window.showAuditTrail('${i.id}', '${i.name}')">🔍</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+      console.log('Row created successfully');
+    } catch(err) {
+      console.error('Error creating row:', err);
+    }
   });
 
   updateSortIndicators(sortBy, sortDirection);
@@ -169,7 +186,9 @@ export function addInitiative() {
     document.getElementById('init-updated').textContent = '';
     document.getElementById('init-calculated-shirt-size').textContent = '';
     window.selectedFactors = [];
+    window.selectedCategories = [];
     window.currentInitiativeJournal = [];
+    window.initCategoriesUI();
     window.renderSelectedFactorsSummary();
     renderJournalLog();
     document.getElementById('journal-comment-input').value = '';
@@ -210,6 +229,20 @@ export function editInitiative(id) {
     window.renderSelectedFactorsSummary();
     renderJournalLog();
     document.getElementById('journal-comment-input').value = '';
+
+    // Initialize categories
+    if (typeof init.categories === 'string') {
+        try {
+            window.selectedCategories = JSON.parse(init.categories || '[]');
+        } catch (e) {
+            console.error('Error parsing categories:', e);
+            window.selectedCategories = [];
+        }
+    } else {
+        window.selectedCategories = Array.isArray(init.categories) ? init.categories : [];
+    }
+    window.initCategoriesUI();
+
     window.openModal('init');
 }
 
@@ -234,6 +267,36 @@ export async function saveInitiative() {
         return;
     } 
     
+    // Get the categories ready for the payload
+    let categories = Array.isArray(window.selectedCategories) ? window.selectedCategories : 
+                    (typeof window.selectedCategories === 'string' ? 
+                    JSON.parse(window.selectedCategories || '[]') : []);
+    
+    console.log('Selected categories before save:', categories);
+    
+    // Increment usage count for each category
+    try {
+        // First load all categories to get their IDs
+        const categoriesRes = await fetch(window.API + '/api/categories');
+        const allCategories = await categoriesRes.json();
+        
+        // For each selected category, find its ID and increment usage
+        for (const categoryName of categories) {
+            const category = allCategories.find(c => c.name === categoryName);
+            if (category) {
+                try {
+                    await fetch(window.API + `/api/categories/${category.id}/increment`, {
+                        method: 'POST'
+                    });
+                } catch (error) {
+                    console.error(`Failed to increment usage for category ${categoryName}:`, error);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error incrementing category usage counts:', error);
+    }
+    
     const payload = {
         name,
         custom_id: document.getElementById('init-custom-id').value.trim(),
@@ -249,7 +312,8 @@ export async function saveInitiative() {
         start_date: document.getElementById('init-start-date').value.trim() || null,
         end_date: document.getElementById('init-end-date').value.trim() || null,
         estimated_duration: parseInt(document.getElementById('init-estimated-duration').value, 10) || null,
-        journal_entries: window.currentInitiativeJournal
+        journal_entries: window.currentInitiativeJournal,
+        categories: categories
     }; 
     
     const url = id ? `/api/initiatives/${id}` : '/api/initiatives'; 
@@ -301,7 +365,8 @@ export async function duplicateInitiative() {
         start_date: document.getElementById('init-start-date').value.trim() || null,
         end_date: document.getElementById('init-end-date').value.trim() || null,
         estimated_duration: parseInt(document.getElementById('init-estimated-duration').value, 10) || null,
-        journal_entries: [newJournalEntry]
+        journal_entries: [newJournalEntry],
+        categories: window.selectedCategories || []
     };
 
     try {
@@ -668,11 +733,13 @@ async function saveJournalEntryToBackend(initiativeId, journalEntries) {
 }
 
 function getAuditDiffs(oldData, newData) {
+    console.log('Comparing audit data:', { oldData, newData });
     const diffs = [];
     const keysToCompare = [
         'name', 'custom_id', 'description', 'priority', 'priority_num',
         'status', 'estimation_type', 'classification', 'scope', 'out_of_scope',
-        'computed_hours', 'shirt_size', 'start_date', 'end_date', 'estimated_duration'
+        'computed_hours', 'shirt_size', 'start_date', 'end_date', 'estimated_duration',
+        'categories'
     ];
 
     for (const key of keysToCompare) {
@@ -689,6 +756,25 @@ function getAuditDiffs(oldData, newData) {
             const newNum = newValue !== null ? newValue : '';
             if (oldNum !== newNum) {
                 diffs.push(`- Changed ${key.replace(/_/g, ' ')} from <span class="diff-removed">${oldNum || 'none'}</span> to <span class="diff-added">${newNum || 'none'}</span>`);
+            }
+        } else if (key === 'categories') {
+            console.log('Comparing categories:', { oldValue, newValue });
+            let oldCats = [];
+            let newCats = [];
+            try {
+                oldCats = typeof oldValue === 'string' ? JSON.parse(oldValue || '[]') : (oldValue || []);
+                newCats = typeof newValue === 'string' ? JSON.parse(newValue || '[]') : (newValue || []);
+                console.log('Parsed categories:', { oldCats, newCats });
+            } catch (e) {
+                console.error('Error parsing categories for diff:', e);
+            }
+            const added = newCats.filter(cat => !oldCats.includes(cat));
+            const removed = oldCats.filter(cat => !newCats.includes(cat));
+            if (added.length > 0) {
+                diffs.push(`- Added categories: <span class="diff-added">${added.join(', ')}</span>`);
+            }
+            if (removed.length > 0) {
+                diffs.push(`- Removed categories: <span class="diff-removed">${removed.join(', ')}</span>`);
             }
         } else if (String(oldValue || '') !== String(newValue || '')) {
             diffs.push(`- Changed ${key.replace(/_/g, ' ')} from <span class="diff-removed">${oldValue || 'empty'}</span> to <span class="diff-added">${newValue || 'empty'}</span>`);

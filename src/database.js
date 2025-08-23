@@ -18,6 +18,7 @@ import * as shirtSizeAuditMigration from './migrations/20250823000003_add_shirt_
 import * as dropdownCreatedAtMigration from './migrations/20250823000004_add_dropdown_options_created_at.js';
 import * as systemSettingsMigration from './migrations/20250823000005_add_system_settings.js';
 import * as estimatedDurationMigration from './migrations/20250823000006_add_estimated_duration.js';
+import * as categoriesMigration from './migrations/20250823000007_add_categories.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,7 +33,8 @@ const migrations = [
   shirtSizeAuditMigration,
   dropdownCreatedAtMigration,
   systemSettingsMigration,
-  estimatedDurationMigration
+  estimatedDurationMigration,
+  categoriesMigration
 ];
 
 /**

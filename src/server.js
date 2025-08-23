@@ -17,6 +17,7 @@ import createResourceTypesRouter from './routes/resourceTypes.js';
 import createShirtSizesRouter from './routes/shirtSizes.js';
 import createDropdownOptionsRouter from './routes/dropdownOptions.js';
 import createBackupRouter from './routes/backup.js';
+import createCategoriesRouter from './routes/categories.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -100,6 +101,7 @@ async function createApp() {
   const shirtSizesRouter = createShirtSizesRouter(db);
   const dropdownOptionsRouter = createDropdownOptionsRouter(db);
   const backupRouter = createBackupRouter(db, updateBackupInterval);
+  const categoriesRouter = createCategoriesRouter(db);
 
   // Mount the routers
   app.use('/api/initiatives', initiativesRouter);
@@ -108,6 +110,7 @@ async function createApp() {
   app.use('/api/shirt-sizes', shirtSizesRouter);
   app.use('/api/dropdown-options', dropdownOptionsRouter);
   app.use('/api/backup', backupRouter);
+  app.use('/api/categories', categoriesRouter);
 
   // Serve the main HTML file for any other route
   app.get('*', (req, res) => {

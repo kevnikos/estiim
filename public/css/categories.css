@@ -1,0 +1,80 @@
+.category-tag {
+    display: inline-block;
+    padding: 2px 6px;
+    background-color: #e6f3ff;
+    border: 1px solid #99ccff;
+    border-radius: 3px;
+    margin: 2px;
+    font-size: 11px;
+    color: #0066cc;
+}
+
+.category-suggestions {
+    position: absolute;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    width: 150px;
+}
+
+.category-suggestion {
+    padding: 6px 12px;
+    cursor: pointer;
+}
+
+.category-suggestion:hover {
+    background-color: #f0f0f0;
+}
+
+.category-input-container {
+    position: relative;
+    display: inline-block;
+    width: 150px;
+    vertical-align: middle;
+}
+
+.categories-display {
+    margin-top: 8px;
+    min-height: 24px;
+}
+
+#init-name-tooltip {
+    position: absolute;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 1000;
+    display: none;
+    max-width: 300px;
+    font-size: 12px;
+}
+
+.list-container {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-top: 12px;
+}
+
+.list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.list-item:last-child {
+    border-bottom: none;
+}
+
+.list-item .item-name {
+    flex: 1;
+}

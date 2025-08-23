@@ -5,6 +5,7 @@
 <title>Estiim – T-Shirt Estimator</title>
 <!-- Lucide CDN script re-added for SVG icons -->
 <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+<link rel="stylesheet" href="css/categories.css">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;display=swap');
 :root { --bg:#f3f4f6; --card:#fff; --border:#e5e7eb; --primary:#2ecc71; --primary-dark:#27ae60; --text:#111827; --overlay:rgba(0,0,0,0.4); --orange:#f97316; --orange-dark:#ea580c; --red:#ef4444; --green:#22c55e; --blue: #007bff; --blue-dark: #0056b3; --light-green: #e0ffe0; --dark-green: #008000;} /* Added new green colors */
@@ -734,6 +735,7 @@ footer {
                 <th class="sortable-th" data-sort="shirt_size">Shirt Size<span class="sort-arrow"></span></th>
                 <th class="sortable-th" data-sort="computed_hours">Estimated Hours<span class="sort-arrow"></span></th>
                 <th class="sortable-th" data-sort="estimated_duration">Est. Duration (mo)<span class="sort-arrow"></span></th>
+                <th>Categories</th>
                 <th class="sortable-th" data-sort="created_at">Created<span class="sort-arrow"></span></th>
                 <th class="sortable-th" data-sort="updated_at">Updated<span class="sort-arrow"></span></th>
                 <th></th>
@@ -786,64 +788,86 @@ footer {
 <section id="prefs">
     <div class="card flex" style="justify-content:space-between;align-items:center;">
         <h2>Preferences</h2>
-        <!-- Removed duplicate Save/Cancel buttons from top of Prefs page -->
     </div>
     
-    <!-- Dropdown Options Management -->
-    <div class="card">
-        <h3>Dropdown Options</h3>
-        <p>Manage options for initiative dropdowns:</p>
-        
-        <!-- Status Options -->
-        <div class="dropdown-options-section">
-            <h4>Status Options</h4>
-            <div class="flex" style="margin-bottom: 12px;">
-                <select id="status-options-list" size="6" style="flex: 1; min-height: 150px;"></select>
-                <div class="dropdown-options-controls">
-                    <button onclick="window.addDropdownOption('status')" style="width: 100%; margin-bottom: 8px;">Add</button>
-                    <button onclick="window.editDropdownOption('status')" style="width: 100%; margin-bottom: 8px; background: var(--blue);">Edit</button>
-                    <button onclick="window.removeDropdownOption('status')" style="width: 100%; background: var(--red);">Remove</button>
+    <div id="preferences-content">
+        <!-- Dropdown Options Management -->
+        <div class="card">
+            <h3>Dropdown Options</h3>
+            <p>Manage options for initiative dropdowns:</p>
+            
+            <!-- Status Options -->
+            <div class="dropdown-options-section">
+                <h4>Status Options</h4>
+                <div class="flex" style="margin-bottom: 12px;">
+                    <select id="status-options-list" size="6" style="flex: 1; min-height: 150px;"></select>
+                    <div class="dropdown-options-controls">
+                        <button onclick="window.addDropdownOption('status')" style="width: 100%; margin-bottom: 8px;">Add</button>
+                        <button onclick="window.editDropdownOption('status')" style="width: 100%; margin-bottom: 8px; background: var(--blue);">Edit</button>
+                        <button onclick="window.removeDropdownOption('status')" style="width: 100%; background: var(--red);">Remove</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Type Options -->
+            <div class="dropdown-options-section">
+                <h4>Estimation Type Options</h4>
+                <div class="flex" style="margin-bottom: 12px;">
+                    <select id="type-options-list" size="6" style="flex: 1; min-height: 150px;"></select>
+                    <div class="dropdown-options-controls">
+                        <button onclick="window.addDropdownOption('type')" style="width: 100%; margin-bottom: 8px;">Add</button>
+                        <button onclick="window.editDropdownOption('type')" style="width: 100%; margin-bottom: 8px; background: var(--blue);">Edit</button>
+                        <button onclick="window.removeDropdownOption('type')" style="width: 100%; background: var(--red);">Remove</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Priority Options -->
+            <div class="dropdown-options-section">
+                <h4>Priority Options</h4>
+                <div class="flex" style="margin-bottom: 12px;">
+                    <select id="priority-options-list" size="6" style="flex: 1; min-height: 150px;"></select>
+                    <div class="dropdown-options-controls">
+                        <button onclick="window.addDropdownOption('priority')" style="width: 100%; margin-bottom: 8px;">Add</button>
+                        <button onclick="window.editDropdownOption('priority')" style="width: 100%; margin-bottom: 8px; background: var(--blue);">Edit</button>
+                        <button onclick="window.removeDropdownOption('priority')" style="width: 100%; background: var(--red);">Remove</button>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Type Options -->
-        <div class="dropdown-options-section">
-            <h4>Estimation Type Options</h4>
-            <div class="flex" style="margin-bottom: 12px;">
-                <select id="type-options-list" size="6" style="flex: 1; min-height: 150px;"></select>
-                <div class="dropdown-options-controls">
-                    <button onclick="window.addDropdownOption('type')" style="width: 100%; margin-bottom: 8px;">Add</button>
-                    <button onclick="window.editDropdownOption('type')" style="width: 100%; margin-bottom: 8px; background: var(--blue);">Edit</button>
-                    <button onclick="window.removeDropdownOption('type')" style="width: 100%; background: var(--red);">Remove</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Priority Options -->
-        <div class="dropdown-options-section">
-            <h4>Priority Options</h4>
-            <div class="flex" style="margin-bottom: 12px;">
-                <select id="priority-options-list" size="6" style="flex: 1; min-height: 150px;"></select>
-                <div class="dropdown-options-controls">
-                    <button onclick="window.addDropdownOption('priority')" style="width: 100%; margin-bottom: 8px;">Add</button>
-                    <button onclick="window.editDropdownOption('priority')" style="width: 100%; margin-bottom: 8px; background: var(--blue);">Edit</button>
-                    <button onclick="window.removeDropdownOption('priority')" style="width: 100%; background: var(--red);">Remove</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- New section for general preferences -->
-    <div class="card" id="prefs-card">
-        <h3>General Preferences</h3>
-        <label style="display:block;margin-top:16px;">
-            <input type="checkbox" id="branding-checkbox"> Enable logos and branding
-        </label>
-    </div>
-    <div style="text-align:right;margin:32px 0 0 0;">
-        <button onclick="window.savePreferences()">Save</button>
-        <button onclick="window.populatePrefsPage()" style="background:var(--border);color:var(--text)">Cancel</button>
+        <!-- Categories Management -->
+        <div class="card">
+            <h3>Categories</h3>
+            <div class="pref-content">
+                <div style="display: flex; gap: 24px;">
+                    <div style="min-width: 300px;">
+                        <div class="pref-row" style="margin-bottom: 12px;">
+                            <input type="text" id="new-category" placeholder="New category name">
+                            <button onclick="window.addCategory()">Add</button>
+                        </div>
+                        <div id="categories-list" class="list-container"></div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div class="list-container" id="selected-categories-list" style="margin-top: 0;">
+                            <!-- Selected categories will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- General Preferences -->
+        <div class="card" id="prefs-card">
+            <h3>General Preferences</h3>
+            <label style="display:block;margin-top:16px;">
+                <input type="checkbox" id="branding-checkbox"> Enable logos and branding
+            </label>
+        </div>
+        <div style="text-align:right;margin:32px 0 0 0;">
+            <button onclick="window.savePreferences()">Save</button>
+            <button onclick="window.populatePrefsPage()" style="background:var(--border);color:var(--text)">Cancel</button>
+        </div>
     </div>
 </section>
 
@@ -928,7 +952,15 @@ footer {
                     <label>Estimated Duration (months)</label><br>
                     <input id="init-estimated-duration" type="number" min="1" max="99" style="width:80px">
                 </div>
+                <div>
+                    <label>Categories</label><br>
+                    <div class="category-input-container">
+                        <input id="init-categories" type="text" placeholder="Add category" style="width:150px">
+                        <div id="category-suggestions" class="category-suggestions" style="display:none"></div>
+                    </div>
+                </div>
             </div>
+            <div id="categories-display" class="categories-display" style="margin-top:8px"></div>
             <div class="flex" style="margin-top:12px">
                 <textarea id="init-scope" placeholder="In Scope" style="flex:1;min-height:80px;margin-right:8px"></textarea>
                 <textarea id="init-out" placeholder="Out of Scope" style="flex:1;min-height:80px"></textarea>
@@ -1052,6 +1084,9 @@ footer {
     </div>
 </div>
 
+
+<!-- Tooltip for initiative name -->
+<div id="init-name-tooltip"></div>
 
 <!-- Custom Message Box Modal -->
 <div id="messageBoxModal" class="message-box-overlay">
