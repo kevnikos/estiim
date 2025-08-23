@@ -57,12 +57,59 @@ export async function backupDatabase() {
     const backupFilePath = path.join(BACKUPS_DIR, backupFileName);
     await fs.copyFile(DB_FILE_PATH, backupFilePath);
     console.log(`INFO: Database backed up to: ${backupFilePath}`);
+    return backupFileName;
   } catch (error) {
     if (error.code === 'ENOENT') {
       console.warn(`WARN: Database file not found at ${DB_FILE_PATH}. Skipping backup.`);
     } else {
       console.error(`ERROR: Failed to backup database:`, error);
     }
+    throw error;
+  }
+}
+
+/**
+ * Lists all available database backups.
+ * @returns {Promise<Array>} Array of backup info objects with filename and timestamp
+ */
+export async function listBackups() {
+  await ensureBackupDirectory();
+  const files = await fs.readdir(BACKUPS_DIR);
+  const backups = await Promise.all(files
+    .filter(file => file.endsWith('.bak'))
+    .map(async file => {
+      const stats = await fs.stat(path.join(BACKUPS_DIR, file));
+      return {
+        filename: file,
+        timestamp: stats.mtime.toISOString(),
+        size: stats.size
+      };
+    }));
+  return backups.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+}
+
+/**
+ * Restores the database from a backup file.
+ * @param {string} backupFileName - The name of the backup file to restore from
+ */
+export async function restoreDatabase(backupFileName) {
+  const backupPath = path.join(BACKUPS_DIR, backupFileName);
+  try {
+    // First verify the backup file exists
+    await fs.access(backupPath, fs.constants.F_OK);
+    
+    // Create a backup of current state before restore
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const preRestoreBackup = `estiim-db-prerestore-${timestamp}.bak`;
+    await fs.copyFile(DB_FILE_PATH, path.join(BACKUPS_DIR, preRestoreBackup));
+    
+    // Perform the restore
+    await fs.copyFile(backupPath, DB_FILE_PATH);
+    console.log(`INFO: Database restored from backup: ${backupFileName}`);
+    return true;
+  } catch (error) {
+    console.error(`ERROR: Failed to restore database from ${backupFileName}:`, error);
+    throw error;
   }
 }
 

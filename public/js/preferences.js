@@ -13,7 +13,8 @@ export function loadPreferences() {
             const parsedPrefs = JSON.parse(prefsCookie);
             window.userPreferences = {
                 initiativeStatusFilter: parsedPrefs.initiativeStatusFilter || '', // New: default to all
-                enableBranding: parsedPrefs.enableBranding !== false // default true
+                enableBranding: parsedPrefs.enableBranding !== false, // default true
+                backupFrequency: parsedPrefs.backupFrequency || 30 // default 30 minutes
             };
         } catch (e) {
             console.error("Error parsing preferences cookie:", e);
@@ -21,7 +22,8 @@ export function loadPreferences() {
     } else {
         window.userPreferences = {
             initiativeStatusFilter: '',
-            enableBranding: true
+            enableBranding: true,
+            backupFrequency: 30 // default 30 minutes
         };
     }
 }
@@ -29,9 +31,22 @@ export function loadPreferences() {
 /**
  * Saves the current preferences from the form to a cookie.
  */
-export function savePreferences() {
+export async function savePreferences() {
     window.userPreferences.initiativeStatusFilter = document.getElementById('init-status-filter').value; // Save the status filter
     window.userPreferences.enableBranding = document.getElementById('branding-checkbox').checked;
+    const newFrequency = parseInt(document.getElementById('backup-frequency').value, 10) || 30;
+    window.userPreferences.backupFrequency = newFrequency;
+
+    // Update server backup frequency if it changed
+    try {
+        await fetch(window.API + '/api/backup/frequency', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ frequency: newFrequency })
+        });
+    } catch (err) {
+        console.error('Error updating backup frequency:', err);
+    }
 
     setCookie('estiim_prefs', JSON.stringify(window.userPreferences), 365);
     window.showMessage('Success', 'Preferences saved successfully!', 'success');
@@ -51,6 +66,10 @@ export function populatePrefsPage() {
     const brandingCheckbox = document.getElementById('branding-checkbox');
     if (brandingCheckbox) {
         brandingCheckbox.checked = window.userPreferences.enableBranding !== false;
+    }
+    const backupFrequency = document.getElementById('backup-frequency');
+    if (backupFrequency) {
+        backupFrequency.value = window.userPreferences.backupFrequency || 30;
     }
 }
 

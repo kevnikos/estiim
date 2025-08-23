@@ -1,0 +1,137 @@
+<div class="settings-container">
+    <h2>Backup Settings</h2>
+    
+    <div class="backup-frequency-section">
+        <h3>Automatic Backup Frequency</h3>
+        <p>Current frequency: <span id="currentFrequency">loading...</span></p>
+        <div class="frequency-controls">
+            <input type="number" id="backupFrequency" min="5" max="1440" step="5" placeholder="Minutes between backups">
+            <button id="updateFrequency">Update Frequency</button>
+        </div>
+        <p class="help-text">Frequency must be between 5 and 1440 minutes (24 hours)</p>
+    </div>
+
+    <div class="manual-backup-section">
+        <h3>Manual Backup</h3>
+        <button id="createBackup">Create Backup Now</button>
+    </div>
+
+    <div class="backup-list-section">
+        <h3>Available Backups</h3>
+        <div class="table-container">
+            <table class="backup-table">
+                <thead>
+                    <tr>
+                        <th>Backup File</th>
+                        <th>Created</th>
+                        <th>Size</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="backupsList">
+                    <tr>
+                        <td colspan="4">Loading backups...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+.settings-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.backup-frequency-section,
+.manual-backup-section,
+.backup-list-section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.frequency-controls {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+#backupFrequency {
+    width: 150px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+button {
+    padding: 8px 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.help-text {
+    color: #666;
+    font-size: 0.9em;
+    margin-top: 5px;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.backup-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.backup-table th,
+.backup-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.backup-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.restore-button {
+    padding: 6px 12px;
+    background-color: #28a745;
+    font-size: 0.9em;
+}
+
+.restore-button:hover {
+    background-color: #218838;
+}
+
+@media (max-width: 768px) {
+    .frequency-controls {
+        flex-direction: column;
+    }
+    
+    #backupFrequency {
+        width: 100%;
+    }
+    
+    .backup-table th,
+    .backup-table td {
+        padding: 8px;
+    }
+}
+</style>

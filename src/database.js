@@ -6,12 +6,50 @@ import { open } from 'sqlite';
 import sqlite3 from 'sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { 
+  initMigrationsTable, 
+  getCurrentVersion,
+  recordMigration,
+  hasBeenApplied 
+} from './migrations/migrationUtils.js';
+import * as buildInfoMigration from './migrations/20250823000001_add_build_info.js';
+import * as efJournalMigration from './migrations/20250823000002_add_ef_journal_and_audit.js';
+import * as shirtSizeAuditMigration from './migrations/20250823000003_add_shirt_size_audit.js';
+import * as dropdownCreatedAtMigration from './migrations/20250823000004_add_dropdown_options_created_at.js';
+import * as systemSettingsMigration from './migrations/20250823000005_add_system_settings.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Define database file path
 const DB_FILE_PATH = path.join(__dirname, 'estiim.db');
+
+// Define all migrations in order
+const migrations = [
+  buildInfoMigration,
+  efJournalMigration,
+  shirtSizeAuditMigration,
+  dropdownCreatedAtMigration,
+  systemSettingsMigration
+];
+
+/**
+ * Apply pending migrations
+ * @param {object} db - Database connection
+ */
+async function runMigrations(db) {
+  await initMigrationsTable(db);
+  
+  for (const migration of migrations) {
+    const isApplied = await hasBeenApplied(db, migration.version);
+    if (!isApplied) {
+      console.log(`INFO: Applying migration ${migration.version}...`);
+      await migration.up(db);
+      await recordMigration(db, migration.version);
+      console.log(`INFO: Migration ${migration.version} applied successfully.`);
+    }
+  }
+}
 
 /**
  * Initializes and opens the SQLite database.
@@ -161,6 +199,9 @@ export async function initializeDatabase() {
 
     console.log('INFO: Default dropdown options seeded.');
   }
+
+  // Run any pending migrations
+  await runMigrations(db);
 
   return db;
 }

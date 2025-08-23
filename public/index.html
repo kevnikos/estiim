@@ -692,6 +692,7 @@ footer {
     <a href="#home" onclick="window.show('#home')">Home</a>
     <a href="#factors" onclick="window.show('#factors')">Estimation Factors</a>
     <a href="#shirt-sizes" onclick="window.show('#shirt-sizes')">Shirt Sizes</a>
+    <a href="#backups" onclick="window.show('#backups')">Backups</a>
     <a href="#prefs" onclick="window.show('#prefs')">Prefs</a>
 </div>
 
@@ -840,6 +841,45 @@ footer {
         <button onclick="window.savePreferences()">Save</button>
         <button onclick="window.populatePrefsPage()" style="background:var(--border);color:var(--text)">Cancel</button>
     </div>
+</section>
+
+<section id="backups">
+  <div class="card">
+    <h2>Database Backup Settings</h2>
+    <div class="card">
+      <h3>Automatic Backup Frequency</h3>
+      <p>Current frequency: <span id="currentFrequency">loading...</span></p>
+      <div class="flex" style="margin-top: 12px;">
+        <input type="number" id="backupFrequency" min="5" max="1440" step="5" placeholder="Minutes between backups">
+        <button id="updateFrequency">Update Frequency</button>
+      </div>
+      <p class="help-text">Frequency must be between 5 and 1440 minutes (24 hours)</p>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+      <div class="flex" style="justify-content: space-between; align-items: center;">
+        <h3>Available Backups</h3>
+        <button id="createBackup">Create Backup Now</button>
+      </div>
+      <div class="table-container" style="margin-top: 12px;">
+        <table class="backup-table">
+          <thead>
+            <tr>
+              <th>Backup File</th>
+              <th>Created</th>
+              <th>Size</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="backupsList">
+            <tr>
+              <td colspan="4">Loading backups...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- Modals -->
@@ -1020,6 +1060,7 @@ footer {
 
 <!-- Refactored script includes -->
 <script type="module" src="js/app.js"></script>
+<script type="module" src="js/backup.js"></script>
 
 </body>
 </html>
