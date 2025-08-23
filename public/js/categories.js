@@ -156,47 +156,7 @@ function updateCategoriesDisplay(categories) {
 // Make removeCategory available globally
 window.removeCategory = removeCategory;
 
-// Function to update the selected categories list in preferences
-function updateSelectedCategoriesList() {
-    const selectedList = document.getElementById('selected-categories-list');
-    if (!selectedList) return;
 
-    // Get all initiatives to find selected categories
-    fetch(window.API + '/api/initiatives')
-        .then(res => res.json())
-        .then(initiatives => {
-            // Build a set of all used categories
-            const usedCategories = new Set();
-            initiatives.forEach(initiative => {
-                let categories = [];
-                try {
-                    categories = typeof initiative.categories === 'string' ? 
-                               JSON.parse(initiative.categories || '[]') : 
-                               (initiative.categories || []);
-                } catch (e) {
-                    console.error('Error parsing categories:', e);
-                }
-                categories.forEach(cat => usedCategories.add(cat));
-            });
-
-            // Display the selected categories
-            selectedList.innerHTML = `
-                <div style="padding: 8px; color: #666; border-bottom: 1px solid var(--border);">
-                    Categories in Use (${usedCategories.size})
-                </div>
-                ${Array.from(usedCategories).sort().map(cat => `
-                    <div class="list-item" style="padding: 8px;">
-                        <span class="item-name">${cat}</span>
-                    </div>
-                `).join('')}
-                ${usedCategories.size === 0 ? '<div style="padding: 8px; text-align: center; color: #888;">No categories in use</div>' : ''}
-            `;
-        })
-        .catch(error => {
-            console.error('Error fetching selected categories:', error);
-            selectedList.innerHTML = '<div style="padding: 8px; color: red;">Error loading selected categories</div>';
-        });
-}
 
 /**
  * Fetch all categories, using cache if available and not expired
@@ -248,7 +208,6 @@ export async function createCategory(name) {
     }
     
     categoriesCache = null; // Invalidate cache
-    updateSelectedCategoriesList(); // Update the selected categories list
     return await res.json();
 }
 
@@ -313,20 +272,11 @@ export async function initCategoryManagement() {
     categoriesSection.innerHTML = `
         <h3>Categories</h3>
         <div class="pref-content">
-            <div style="display: flex; gap: 24px;">
-                <div style="min-width: 300px;">
-                    <div class="pref-row" style="margin-bottom: 12px;">
-                        <input type="text" id="new-category" placeholder="New category name">
-                        <button onclick="window.addCategory()">Add</button>
-                    </div>
-                    <div id="categories-list" class="list-container"></div>
-                </div>
-                <div style="flex: 1;">
-                    <div class="list-container" id="selected-categories-list" style="margin-top: 0;">
-                        <!-- Selected categories will be displayed here -->
-                    </div>
-                </div>
+            <div class="pref-row" style="margin-bottom: 12px;">
+                <input type="text" id="new-category" placeholder="New category name">
+                <button onclick="window.addCategory()">Add</button>
             </div>
+            <div id="categories-list" class="list-container"></div>
         </div>
     `;
     
@@ -340,7 +290,6 @@ export async function initCategoryManagement() {
     }
     
     refreshCategoriesList();
-    updateSelectedCategoriesList();
 }
 
 /**

@@ -840,20 +840,11 @@ footer {
         <div class="card">
             <h3>Categories</h3>
             <div class="pref-content">
-                <div style="display: flex; gap: 24px;">
-                    <div style="min-width: 300px;">
-                        <div class="pref-row" style="margin-bottom: 12px;">
-                            <input type="text" id="new-category" placeholder="New category name">
-                            <button onclick="window.addCategory()">Add</button>
-                        </div>
-                        <div id="categories-list" class="list-container"></div>
-                    </div>
-                    <div style="flex: 1;">
-                        <div class="list-container" id="selected-categories-list" style="margin-top: 0;">
-                            <!-- Selected categories will be displayed here -->
-                        </div>
-                    </div>
+                <div class="pref-row" style="margin-bottom: 12px;">
+                    <input type="text" id="new-category" placeholder="New category name">
+                    <button onclick="window.addCategory()">Add</button>
                 </div>
+                <div id="categories-list" class="list-container"></div>
             </div>
         </div>
 
