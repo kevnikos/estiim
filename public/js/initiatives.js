@@ -79,9 +79,20 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
   window.initList = allInitiatives; // Still store all initiatives for other uses like edit
   console.log('Loaded initiatives:', allInitiatives);
 
-  // Apply search filter if there's search text
+    // Apply search filter if there's search text
   if (searchText) {
     allInitiatives = allInitiatives.filter(initiative => {
+      // Parse categories if they are stored as a string
+      let categories = [];
+      try {
+        categories = typeof initiative.categories === 'string' 
+          ? JSON.parse(initiative.categories || '[]') 
+          : (Array.isArray(initiative.categories) ? initiative.categories : []);
+      } catch (e) {
+        console.error('Error parsing categories during search:', e);
+        categories = [];
+      }
+      
       return (
         (initiative.name || '').toLowerCase().includes(searchText) ||
         (initiative.custom_id || '').toLowerCase().includes(searchText) ||
@@ -92,12 +103,10 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
         String(initiative.priority_num || '').includes(searchText) ||
         String(initiative.computed_hours || '').includes(searchText) ||
         String(initiative.estimated_duration || '').includes(searchText) ||
-        (initiative.categories || []).some(cat => cat.toLowerCase().includes(searchText))
+        categories.some(cat => cat.toLowerCase().includes(searchText))
       );
     });
-  }
-
-  // Sort the filtered initiatives
+  }  // Sort the filtered initiatives
   allInitiatives.sort((a, b) => {
     let valA = a[sortBy];
     let valB = b[sortBy];
