@@ -19,7 +19,15 @@ export async function loadRT() {
     const itemsToDisplay = filteredResourceTypes;
     itemsToDisplay.forEach(r => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${r.name}</td><td>${r.description || ''}</td><td><button onclick="window.editRT('${r.id}')">Edit</button><button onclick="window.delRT('${r.id}')" style="background:var(--red)">Del</button></td>`;
+        tr.innerHTML = `
+            <td>${r.name}</td>
+            <td>${r.description || ''}</td>
+            <td>${r.resource_category || ''}</td>
+            <td>${r.resource_cost ? r.resource_cost.toFixed(2) : ''}</td>
+            <td>
+                <button onclick="window.editRT('${r.id}')">Edit</button>
+                <button onclick="window.delRT('${r.id}')" style="background:var(--red)">Del</button>
+            </td>`;
         tbody.appendChild(tr);
     });
 }
@@ -31,6 +39,8 @@ export function openAddResourceTypeModal() {
     document.getElementById('rt-id').value = '';
     document.getElementById('rt-name').value = '';
     document.getElementById('rt-desc').value = '';
+    document.getElementById('rt-category').value = 'Labour';
+    document.getElementById('rt-cost').value = '';
     window.openModal('rt');
 }
 
@@ -43,6 +53,8 @@ export function editRT(id) {
     document.getElementById('rt-id').value = rt.id;
     document.getElementById('rt-name').value = rt.name;
     document.getElementById('rt-desc').value = rt.description || '';
+    document.getElementById('rt-category').value = rt.resource_category || 'Labour';
+    document.getElementById('rt-cost').value = rt.resource_cost || '';
     window.openModal('rt');
 }
 
@@ -67,12 +79,25 @@ export async function saveResourceType() {
         return;
     }
     const desc = document.getElementById('rt-desc').value;
+    const resource_category = document.getElementById('rt-category').value;
+    const resource_cost = parseFloat(document.getElementById('rt-cost').value);
+    
+    if (document.getElementById('rt-cost').value && isNaN(resource_cost)) {
+        window.showMessage('Error', 'Resource Cost must be a valid number', 'error');
+        return;
+    }
+
     const url = id ? `/api/resource-types/${id}` : '/api/resource-types';
     const method = id ? 'PUT' : 'POST';
     const res = await fetch(window.API + url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description: desc })
+        body: JSON.stringify({ 
+            name, 
+            description: desc, 
+            resource_category,
+            resource_cost: document.getElementById('rt-cost').value ? resource_cost.toFixed(2) : null
+        })
     });
     if (!res.ok) {
         window.showMessage('Error', 'Error: ' + res.status, 'error');

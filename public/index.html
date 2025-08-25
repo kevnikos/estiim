@@ -755,7 +755,7 @@ footer {
         <button onclick="window.openAddResourceTypeModal()">+ Add Resource Type</button>
     </div>
     <div id="rt-table-container" class="card">
-        <table id="rt-table"><thead><tr><th>Name</th><th>Description</th><th></th></tr></thead><tbody></tbody></table>
+        <table id="rt-table"><thead><tr><th>Name</th><th>Description</th><th>Resource Type</th><th>Resource Cost</th><th></th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
@@ -997,6 +997,21 @@ footer {
     <input id="rt-id" type="hidden">
     <input id="rt-name" placeholder="Name" style="width:100%;margin-top:12px">
     <textarea id="rt-desc" placeholder="Description" style="width:100%;margin-top:12px"></textarea>
+    
+    <div style="display: flex; gap: 12px; margin-top: 12px;">
+        <div style="flex: 1;">
+            <label for="rt-category" style="display: block; margin-bottom: 4px; font-weight: 600;">Resource Type</label>
+            <select id="rt-category" style="width:100%;">
+                <option value="Labour">Labour</option>
+                <option value="Non-Labour">Non-Labour</option>
+            </select>
+        </div>
+        <div style="flex: 1;">
+            <label for="rt-cost" style="display: block; margin-bottom: 4px; font-weight: 600;">Resource Cost</label>
+            <input id="rt-cost" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%;" />
+        </div>
+    </div>
+    
     <div style="text-align:right;margin-top:16px"><button onclick="window.saveResourceType()">Save</button><button onclick="window.closeModal('rt')" style="background:var(--border);color:var(--text)">Cancel</button></div>
 </div></div>
 

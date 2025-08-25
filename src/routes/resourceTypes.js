@@ -23,14 +23,19 @@ export default function createResourceTypesRouter(db) {
     // POST /api/resource-types
     router.post('/',
         body('name').notEmpty().withMessage('Name is required'),
+        body('resource_category').isIn(['Labour', 'Non-Labour']).withMessage('Resource category must be Labour or Non-Labour'),
+        body('resource_cost').optional().isFloat({ min: 0 }).withMessage('Resource cost must be a positive number'),
         async (req, res) => {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
                 return res.status(400).json({ errors: errors.array() });
             }
-            const { name, description } = req.body;
+            const { name, description, resource_category, resource_cost } = req.body;
             const newId = uuid();
-            await db.run('INSERT INTO resource_types (id, name, description) VALUES (?, ?, ?)', [newId, name, description]);
+            await db.run(
+                'INSERT INTO resource_types (id, name, description, resource_category, resource_cost) VALUES (?, ?, ?, ?, ?)', 
+                [newId, name, description, resource_category || 'Labour', resource_cost || null]
+            );
             const newRT = await db.get('SELECT * FROM resource_types WHERE id = ?', [newId]);
             res.status(201).json(newRT);
         }
@@ -39,14 +44,19 @@ export default function createResourceTypesRouter(db) {
     // PUT /api/resource-types/:id
     router.put('/:id',
         body('name').notEmpty().withMessage('Name is required'),
+        body('resource_category').isIn(['Labour', 'Non-Labour']).withMessage('Resource category must be Labour or Non-Labour'),
+        body('resource_cost').optional().isFloat({ min: 0 }).withMessage('Resource cost must be a positive number'),
         async (req, res) => {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
                 return res.status(400).json({ errors: errors.array() });
             }
             const { id } = req.params;
-            const { name, description } = req.body;
-            await db.run('UPDATE resource_types SET name = ?, description = ? WHERE id = ?', [name, description, id]);
+            const { name, description, resource_category, resource_cost } = req.body;
+            await db.run(
+                'UPDATE resource_types SET name = ?, description = ?, resource_category = ?, resource_cost = ? WHERE id = ?', 
+                [name, description, resource_category, resource_cost, id]
+            );
             const updatedRT = await db.get('SELECT * FROM resource_types WHERE id = ?', [id]);
             res.json(updatedRT);
         }
