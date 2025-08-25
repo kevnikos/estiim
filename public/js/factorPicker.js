@@ -29,6 +29,14 @@ export async function openFactorModal() {
     loadFactorPicker();
     updateDateCalculations();
     window.openModal('factors');
+    
+    // Scroll to top of the factor picker container
+    setTimeout(() => {
+        const factorPickerContainer = document.getElementById('factor-picker-container');
+        if (factorPickerContainer) {
+            factorPickerContainer.scrollTop = 0;
+        }
+    }, 100); // Small delay to ensure modal is fully rendered
 }
 
 /**
@@ -116,15 +124,19 @@ export function loadFactorPicker(searchQuery = '') {
   });
 
   // Sort: 
-  // 1. Selected items first (checked factors + manual resources with values) - alphabetical
+  // 1. Selected items first (checked factors + manual resources with values) - prebuilt factors first, then manual items, both alphabetical
   // 2. Unselected pre-built factors - alphabetical  
   // 3. Unselected manual resources - alphabetical
   const sortedItems = updatedFilteredItems.sort((a, b) => {
       const aIsSelected = (a.type === 'factor' && a.isChecked) || (a.type === 'manual' && a.isSelected);
       const bIsSelected = (b.type === 'factor' && b.isChecked) || (b.type === 'manual' && b.isSelected);
       
-      // Both selected - sort alphabetically
+      // Both selected - prebuilt factors first, then manual items, both alphabetical
       if (aIsSelected && bIsSelected) {
+          // If one is prebuilt factor and one is manual, prebuilt factor goes first
+          if (a.type === 'factor' && b.type === 'manual') return -1;
+          if (a.type === 'manual' && b.type === 'factor') return 1;
+          // If both are same type, sort alphabetically
           return a.name.localeCompare(b.name);
       }
       
@@ -314,8 +326,11 @@ export function toggleQty(id) {
     } else {
         window.selectedFactors = window.selectedFactors.filter(sf => sf.factorId !== id);
     }
-    const currentSearchQuery = document.getElementById('factor-search-input').value;
-    loadFactorPicker(currentSearchQuery);
+    
+    // Show/hide quantity input immediately without resorting
+    toggleQtyDisplay(id);
+    
+    // Don't resort immediately - only update calculations
     updateFactorCalculations();
 }
 
