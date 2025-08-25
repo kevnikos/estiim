@@ -213,7 +213,15 @@ export async function duplicateEstimationFactor() {
         return;
     }
 
-    const newName = originalName + " Copy";
+    // Generate a unique name by checking existing factor names
+    let newName = originalName + " Copy";
+    let counter = 1;
+    const existingNames = (window.efList || []).map(ef => ef.name.toLowerCase());
+    
+    while (existingNames.includes(newName.toLowerCase())) {
+        counter++;
+        newName = originalName + " Copy " + counter;
+    }
     const description = document.getElementById('ef-description').value.trim();
     const hours = {};
     const values = {};
