@@ -4,6 +4,7 @@
  */
 
 import { formatNumberInput, parseFormattedNumber } from './factorPicker.js';
+import { formatDateInEST } from './ui.js';
 
 /**
  * Loads and displays the list of resource types.
@@ -81,105 +82,111 @@ export async function delRT(id) {
 }
 
 /**
+ * Compares old and new data for a resource type and returns an array of change descriptions.
+ * @param {object} oldData - The old resource type data.
+ * @param {object} newData - The new resource type data.
+ * @returns {string[]} An array of strings describing the changes.
+ */
+function getResourceTypeAuditDiffs(oldData, newData) {
+    console.log('getResourceTypeAuditDiffs called with:', { oldData, newData });
+    const diffs = [];
+    
+    // Compare name
+    if (oldData.name !== newData.name) {
+        console.log('Name changed:', oldData.name, '->', newData.name);
+        diffs.push(`- Changed name from <span class="diff-removed">${oldData.name || '""'}</span> to <span class="diff-added">${newData.name || '""'}</span>`);
+    }
+    
+    // Compare description
+    if (oldData.description !== newData.description) {
+        console.log('Description changed:', oldData.description, '->', newData.description);
+        diffs.push(`- Changed description from <span class="diff-removed">${oldData.description || '""'}</span> to <span class="diff-added">${newData.description || '""'}</span>`);
+    }
+    
+    // Compare resource category
+    if (oldData.resource_category !== newData.resource_category) {
+        console.log('Resource category changed:', oldData.resource_category, '->', newData.resource_category);
+        diffs.push(`- Changed resource category from <span class="diff-removed">${oldData.resource_category || '""'}</span> to <span class="diff-added">${newData.resource_category || '""'}</span>`);
+    }
+    
+    // Compare resource cost
+    const oldCost = oldData.resource_cost || 0;
+    const newCost = newData.resource_cost || 0;
+    console.log('Comparing costs:', { oldCost, newCost, oldType: typeof oldCost, newType: typeof newCost });
+    if (parseFloat(oldCost) !== parseFloat(newCost)) {
+        console.log('Resource cost changed:', oldCost, '->', newCost);
+        const oldFormatted = oldCost > 0 ? formatNumberInput(parseFloat(oldCost)) : '0.00';
+        const newFormatted = newCost > 0 ? formatNumberInput(parseFloat(newCost)) : '0.00';
+        diffs.push(`- Changed resource cost from <span class="diff-removed">$${oldFormatted}</span> to <span class="diff-added">$${newFormatted}</span>`);
+    }
+    
+    console.log('Generated diffs:', diffs);
+    return diffs;
+}
+
+/**
  * Shows the audit trail for a resource type in a modal.
  * @param {string} id - The ID of the resource type.
  */
 export async function showResourceTypeAuditTrail(id) {
-    console.log('showResourceTypeAuditTrail called with id:', id);
+    const rt = window.rtList.find(x => x.id === id);
+    if (!rt) {
+        window.showMessage('Error', 'Resource type not found', 'error');
+        return;
+    }
+    
+    document.getElementById('rt-audit-title').textContent = `Audit Trail: ${rt.name}`;
+    const auditContent = document.getElementById('rt-audit-content');
+    auditContent.innerHTML = 'Loading...';
+    window.openModal('rt-audit');
+
     try {
-        console.log('Fetching audit trail from:', window.API + `/api/resource-types/${id}/audit`);
         const response = await fetch(window.API + `/api/resource-types/${id}/audit`);
-        console.log('Response status:', response.status, response.ok);
-        
         if (!response.ok) throw new Error('Failed to fetch audit trail');
-        const audit = await response.json();
-        console.log('Audit data received:', audit);
+        const auditLog = await response.json();
         
-        const rt = window.rtList.find(x => x.id === id);
-        console.log('Resource type found:', rt);
+        console.log('Resource type audit log received:', auditLog);
         
-        const modalContent = document.createElement('div');
-        modalContent.innerHTML = `
-            <h2>Audit Trail - ${rt.name}</h2>
-            <div class="audit-trail-container">
-                <table class="audit-trail-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Action</th>
-                            <th>Name</th>
-                            <th>Description</th>
-                            <th>Resource Type</th>
-                            <th>Resource Cost</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${audit.map(entry => {
-                            let newData = {};
-                            try {
-                                newData = JSON.parse(entry.new_data || '{}');
-                            } catch (e) {
-                                console.error('Error parsing new_data:', e);
-                            }
-                            
-                            return `
-                                <tr>
-                                    <td>${new Date(entry.timestamp).toLocaleString()}</td>
-                                    <td>${entry.action}</td>
-                                    <td>${newData.name || ''}</td>
-                                    <td>${newData.description || ''}</td>
-                                    <td>${newData.resource_category || ''}</td>
-                                    <td>${newData.resource_cost ? formatNumberInput(parseFloat(newData.resource_cost)) : ''}</td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
-        
-        // Remove any existing modal
-        const existingModal = document.querySelector('.modal-overlay');
-        if (existingModal) {
-            console.log('Removing existing modal');
-            existingModal.remove();
+        auditContent.innerHTML = '';
+        if (auditLog.length === 0) {
+            auditContent.innerHTML = '<p>No audit history for this resource type.</p>';
+        } else {
+            const sortedAuditLog = [...auditLog].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            sortedAuditLog.forEach(entry => {
+                console.log('Processing audit entry:', entry);
+                const logItem = document.createElement('div');
+                logItem.className = 'audit-item';
+                let details = '';
+                if (entry.type === 'audit') {
+                    logItem.classList.add('audit');
+                    let oldData = {};
+                    let newData = {};
+                    
+                    // Parse old_data and new_data which are JSON strings
+                    try {
+                        oldData = typeof entry.old_data === 'string' ? JSON.parse(entry.old_data || '{}') : (entry.old_data || {});
+                        newData = typeof entry.new_data === 'string' ? JSON.parse(entry.new_data || '{}') : (entry.new_data || {});
+                        console.log('Parsed audit data:', { oldData, newData });
+                    } catch (e) {
+                        console.error('Error parsing audit data:', e, { old_data: entry.old_data, new_data: entry.new_data });
+                    }
+                    
+                    if (entry.action === 'created') {
+                        details = `Created resource type: ${newData.name || 'N/A'} with category: ${newData.resource_category || 'N/A'}.`;
+                    } else if (entry.action === 'updated') {
+                        const diffs = getResourceTypeAuditDiffs(oldData, newData);
+                        console.log('Generated diffs:', diffs);
+                        details = diffs.length > 0 ? diffs.join('<br>') : 'No changes to tracked fields.';
+                    }
+                    logItem.innerHTML = `<h4>${entry.action.charAt(0).toUpperCase() + entry.action.slice(1).replace(/_/g, ' ')} on ${formatDateInEST(entry.timestamp)}</h4><p>${details}</p>`;
+                } else {
+                    logItem.innerHTML = `<h4>Comment on ${formatDateInEST(entry.timestamp)}</h4><p>${entry.text}</p>`;
+                }
+                auditContent.appendChild(logItem);
+            });
         }
-        
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="modal">
-                <button class="close">×</button>
-                ${modalContent.innerHTML}
-            </div>`;
-            
-        console.log('Modal created, adding event listeners');
-        
-        // Add close button event listener
-        modal.querySelector('.close').addEventListener('click', () => {
-            console.log('Close button clicked');
-            modal.remove();
-        });
-        
-        // Add click outside to close
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                console.log('Clicked outside modal');
-                modal.remove();
-            }
-        });
-        
-        // Append modal to document body
-        console.log('Appending modal to document body');
-        document.body.appendChild(modal);
-        
-        // Make the modal visible by setting display to flex
-        modal.style.display = 'flex';
-        console.log('Modal should now be visible');
-        
     } catch (error) {
-        console.error('Error displaying audit trail:', error);
-        window.showMessage('Error', 'Failed to load audit trail', 'error');
+        auditContent.innerHTML = `<p style="color:var(--red);">Error fetching audit trail: ${error.message || error}</p>`;
     }
 }
 
