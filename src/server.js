@@ -60,7 +60,11 @@ function updateBackupInterval(frequencyMinutes) {
 async function createApp() {
   // Initialize Express app
   const app = express();
-  app.use(express.json());
+  
+  // Configure JSON body parser with increased size limit for large initiatives
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+  
   app.use(express.static(PUBLIC_DIR));
 
   // Debug logging middleware
