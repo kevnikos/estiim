@@ -85,19 +85,49 @@ export function loadFactorPicker(searchQuery = '') {
       }
   });
 
-  // Sort: checked factors first, then unchecked factors, then manual resources, all alphabetically within groups
-  const sortedItems = filteredItems.sort((a, b) => {
-      if (a.type === 'factor' && b.type === 'factor') {
-          if (a.isChecked && !b.isChecked) return -1;
-          if (!a.isChecked && b.isChecked) return 1;
-          return a.name.localeCompare(b.name);
-      } else if (a.type === 'factor' && b.type === 'manual') {
-          return -1; // Factors before manual resources
-      } else if (a.type === 'manual' && b.type === 'factor') {
-          return 1; // Manual resources after factors
-      } else {
-          return a.name.localeCompare(b.name); // Both manual, sort alphabetically
+  // Check if manual resources have values (are "selected")
+  const manualResourcesWithSelection = manualResourceItems.map(item => {
+      const rtId = item.resource_type_id;
+      const currentManualHours = (window.manualResources?.manualHours || {})[rtId] || 0;
+      const currentManualValues = (window.manualResources?.manualValues || {})[rtId] || 0;
+      const hasValue = currentManualHours > 0 || currentManualValues > 0;
+      return { ...item, isSelected: hasValue };
+  });
+  
+  // Update the filtered items to include manual resource selection status
+  const updatedFilteredItems = filteredItems.map(item => {
+      if (item.type === 'manual') {
+          const updatedItem = manualResourcesWithSelection.find(mr => mr.id === item.id);
+          return updatedItem || item;
       }
+      return item;
+  });
+
+  // Sort: 
+  // 1. Selected items first (checked factors + manual resources with values) - alphabetical
+  // 2. Unselected pre-built factors - alphabetical  
+  // 3. Unselected manual resources - alphabetical
+  const sortedItems = updatedFilteredItems.sort((a, b) => {
+      const aIsSelected = (a.type === 'factor' && a.isChecked) || (a.type === 'manual' && a.isSelected);
+      const bIsSelected = (b.type === 'factor' && b.isChecked) || (b.type === 'manual' && b.isSelected);
+      
+      // Both selected - sort alphabetically
+      if (aIsSelected && bIsSelected) {
+          return a.name.localeCompare(b.name);
+      }
+      
+      // One selected, one not - selected first
+      if (aIsSelected && !bIsSelected) return -1;
+      if (!aIsSelected && bIsSelected) return 1;
+      
+      // Both unselected - pre-built factors first, then manual resources, both alphabetical
+      if (!aIsSelected && !bIsSelected) {
+          if (a.type === 'factor' && b.type === 'manual') return -1;
+          if (a.type === 'manual' && b.type === 'factor') return 1;
+          return a.name.localeCompare(b.name);
+      }
+      
+      return 0;
   });
 
   // Render each item
@@ -201,7 +231,8 @@ function renderManualResourceItem(resource, container) {
                        value="${displayValue}"
                        style="width: 80px;" 
                        placeholder="0"
-                       oninput="window.updateFactorCalculations()">
+                       oninput="window.updateFactorCalculations()" 
+                       onblur="window.debouncedResort()">
                 <span style="font-size: 0.9em; color: #666; width: 40px;">units</span>
             </div>
         `;
@@ -217,8 +248,9 @@ function renderManualResourceItem(resource, container) {
                        value="${displayValue}"
                        style="width: 60px;" 
                        placeholder="0"
-                       oninput="window.updateFactorCalculations()">
-                <select id="manual-unit-${rtId}" style="width: 50px;" onchange="window.updateFactorCalculations()">
+                       oninput="window.updateFactorCalculations()" 
+                       onblur="window.debouncedResort()">
+                <select id="manual-unit-${rtId}" style="width: 50px;" onchange="window.updateFactorCalculations(); window.debouncedResort()">
                     <option value="h" ${displayUnit === 'h' ? 'selected' : ''}>h</option>
                     <option value="d" ${displayUnit === 'd' ? 'selected' : ''}>d</option>
                 </select>
@@ -344,6 +376,66 @@ export function updateFactorCalculations() {
     document.getElementById('factor-days').textContent = `${totalDays}d`;
     document.getElementById('factor-months').textContent = `${totalMonths}m`;
     document.getElementById('factor-size').textContent = `Size: ${shirtSize}`;
+}
+
+/**
+ * Updates manual resource calculations and refreshes the list to maintain proper sorting.
+ */
+export function updateManualResourceAndSort() {
+    updateFactorCalculations();
+    
+    // Refresh the list to maintain proper sorting when manual resource values change
+    const currentSearchQuery = document.getElementById('factor-search-input').value;
+    loadFactorPicker(currentSearchQuery);
+}
+
+/**
+ * Debounced resort function to avoid constant re-rendering while user is typing
+ */
+let resortTimeout;
+export function debouncedResort() {
+    clearTimeout(resortTimeout);
+    resortTimeout = setTimeout(() => {
+        // Preserve all current manual resource values before re-rendering
+        const currentValues = {};
+        const currentUnits = {};
+        
+        if (window.rtList) {
+            window.rtList.forEach(rt => {
+                const input = document.getElementById(`manual-${rt.id}`);
+                const unitSelect = document.getElementById(`manual-unit-${rt.id}`);
+                
+                if (input && input.value) {
+                    currentValues[rt.id] = input.value;
+                }
+                if (unitSelect && unitSelect.value) {
+                    currentUnits[rt.id] = unitSelect.value;
+                }
+            });
+        }
+        
+        // Re-render the list
+        const currentSearchQuery = document.getElementById('factor-search-input').value;
+        loadFactorPicker(currentSearchQuery);
+        
+        // Restore all the values after re-rendering
+        if (window.rtList) {
+            window.rtList.forEach(rt => {
+                if (currentValues[rt.id]) {
+                    const input = document.getElementById(`manual-${rt.id}`);
+                    if (input) {
+                        input.value = currentValues[rt.id];
+                    }
+                }
+                if (currentUnits[rt.id]) {
+                    const unitSelect = document.getElementById(`manual-unit-${rt.id}`);
+                    if (unitSelect) {
+                        unitSelect.value = currentUnits[rt.id];
+                    }
+                }
+            });
+        }
+    }, 100); // Short delay to batch multiple rapid changes
 }
 
 
