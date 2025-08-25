@@ -24,11 +24,21 @@ export async function loadRT() {
             <td>${r.description || ''}</td>
             <td>${r.resource_category || ''}</td>
             <td>${r.resource_cost ? r.resource_cost.toFixed(2) : ''}</td>
-            <td>
-                <button onclick="window.editRT('${r.id}')">Edit</button>
-                <button onclick="window.delRT('${r.id}')" style="background:var(--red)">Del</button>
+            <td class="actions-cell">
+                <button class="edit-btn">Edit</button>
+                <button class="delete-btn" style="background:var(--red)">Del</button>
+                <button class="audit-btn" style="background:var(--primary)">🔍</button>
             </td>`;
         tbody.appendChild(tr);
+        
+        // Add event listeners
+        const editBtn = tr.querySelector('.edit-btn');
+        const deleteBtn = tr.querySelector('.delete-btn');
+        const auditBtn = tr.querySelector('.audit-btn');
+        
+        editBtn.addEventListener('click', () => editRT(r.id));
+        deleteBtn.addEventListener('click', () => delRT(r.id));
+        auditBtn.addEventListener('click', () => showResourceTypeAuditTrail(r.id));
     });
 }
 
@@ -66,6 +76,90 @@ export async function delRT(id) {
     if (!confirm('Delete?')) return;
     await fetch(window.API + `/api/resource-types/${id}`, { method: 'DELETE' });
     loadRT();
+}
+
+/**
+ * Shows the audit trail for a resource type in a modal.
+ * @param {string} id - The ID of the resource type.
+ */
+export async function showResourceTypeAuditTrail(id) {
+    try {
+        const response = await fetch(window.API + `/api/resource-types/${id}/audit`);
+        if (!response.ok) throw new Error('Failed to fetch audit trail');
+        const audit = await response.json();
+        
+        const rt = window.rtList.find(x => x.id === id);
+        const modalContent = document.createElement('div');
+        modalContent.innerHTML = `
+            <h2>Audit Trail - ${rt.name}</h2>
+            <div class="audit-trail-container">
+                <table class="audit-trail-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Action</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Resource Type</th>
+                            <th>Resource Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${audit.map(entry => {
+                            let newData = {};
+                            try {
+                                newData = JSON.parse(entry.new_data || '{}');
+                            } catch (e) {
+                                console.error('Error parsing new_data:', e);
+                            }
+                            
+                            return `
+                                <tr>
+                                    <td>${new Date(entry.timestamp).toLocaleString()}</td>
+                                    <td>${entry.action}</td>
+                                    <td>${newData.name || ''}</td>
+                                    <td>${newData.description || ''}</td>
+                                    <td>${newData.resource_category || ''}</td>
+                                    <td>${newData.resource_cost ? parseFloat(newData.resource_cost).toFixed(2) : ''}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        // Remove any existing modal
+        const existingModal = document.querySelector('.modal-overlay');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal">
+                <button class="close">×</button>
+                ${modalContent.innerHTML}
+            </div>`;
+            
+        // Add close button event listener
+        modal.querySelector('.close').addEventListener('click', () => modal.remove());
+        
+        // Add click outside to close
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+        
+        // Append modal to document body
+        document.body.appendChild(modal);
+        
+    } catch (error) {
+        console.error('Error displaying audit trail:', error);
+        window.showMessage('Error', 'Failed to load audit trail', 'error');
+    }
 }
 
 /**

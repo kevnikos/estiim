@@ -21,6 +21,7 @@ import * as systemSettingsMigration from './migrations/20250823000005_add_system
 import * as estimatedDurationMigration from './migrations/20250823000006_add_estimated_duration.js';
 import * as categoriesMigration from './migrations/20250823000007_add_categories.js';
 import * as resourceTypePropertiesMigration from './migrations/20250824000001_add_resource_type_properties.js';
+import * as resourceTypesAuditMigration from './migrations/20250824000002_add_resource_types_audit.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,7 +55,8 @@ const migrations = [
   systemSettingsMigration,
   estimatedDurationMigration,
   categoriesMigration,
-  resourceTypePropertiesMigration
+  resourceTypePropertiesMigration,
+  resourceTypesAuditMigration
 ];
 
 /**
