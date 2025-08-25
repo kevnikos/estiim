@@ -3,6 +3,7 @@
  * Handles all CRUD operations and UI for the main Estimation Factors page.
  */
 import { formatDateInEST } from './ui.js';
+import { formatNumberInput, parseFormattedNumber } from './factorPicker.js';
 
 /**
  * Loads and displays the list of estimation factors.
@@ -121,8 +122,8 @@ export async function editEF(id) {
     const rt = window.rtList.find(r => r.id === rtId);
     
     if (inp && rt && rt.resource_category === 'Non-Labour') {
-      // For Non-Labour, just set the raw value (no conversion)
-      inp.value = val;
+      // For Non-Labour, set the formatted value
+      inp.value = formatNumberInput(val);
     }
   });
   document.getElementById('ef-created').textContent = formatDateInEST(f.created_at);
@@ -160,13 +161,18 @@ export async function saveEstimationFactor() {
         const inp = document.getElementById(`ef-h-${rt.id}`);
         const sel = document.getElementById(`ef-u-${rt.id}`);
         if (!inp) return;
-        let val = +inp.value;
-        if (val > 0) {
-            if (rt.resource_category === 'Non-Labour') {
-                // For Non-Labour, store the raw value in valuePerResourceType
+        
+        let val;
+        if (rt.resource_category === 'Non-Labour') {
+            // For Non-Labour, parse the formatted value
+            val = parseFormattedNumber(inp.value);
+            if (val > 0) {
                 values[rt.id] = val;
-            } else {
-                // For Labour, handle hours/days conversion and store in hoursPerResourceType
+            }
+        } else {
+            // For Labour, handle hours/days conversion and store in hoursPerResourceType
+            val = +inp.value;
+            if (val > 0) {
                 if (sel && sel.value === 'd') val *= 8;
                 hours[rt.id] = val;
             }
@@ -277,12 +283,14 @@ export function renderEFGrid() {
         const isNonLabour = rt.resource_category === 'Non-Labour';
         
         if (isNonLabour) {
-            // For Non-Labour: show a larger input box for numerical value only
+            // For Non-Labour: show a larger input box for numerical value with formatting
             row.innerHTML = `
                 <label style="width:120px">${rt.name}</label>
-                <input type="number" min="0" step="0.01" id="ef-h-${rt.id}" 
-                       style="flex: 1; margin-right: 8px;" 
-                       placeholder="Enter quantity/cost">
+                <input type="text" id="ef-h-${rt.id}" 
+                       style="flex: 1; margin-right: 8px; text-align: right;" 
+                       placeholder="0.00"
+                       oninput="window.handleEFNonLabourInput(this)" 
+                       onblur="window.handleEFNonLabourBlur(this)">
                 <span style="width: 60px; display: flex; align-items: center; color: var(--text); font-size: 12px;">units</span>
             `;
         } else {
@@ -465,4 +473,19 @@ function getFactorAuditDiffs(oldData, newData) {
     });
 
     return diffs;
+}
+
+/**
+ * Handles input events for non-labour value fields in estimation factor modal
+ */
+export function handleEFNonLabourInput(input) {
+    // Allow typing without immediate formatting to avoid cursor jumping
+}
+
+/**
+ * Handles blur events for non-labour value fields - applies formatting
+ */
+export function handleEFNonLabourBlur(input) {
+    const rawValue = parseFormattedNumber(input.value);
+    input.value = formatNumberInput(rawValue);
 }

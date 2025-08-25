@@ -3,6 +3,8 @@
  * Handles CRUD operations and UI for the Resource Types section.
  */
 
+import { formatNumberInput, parseFormattedNumber } from './factorPicker.js';
+
 /**
  * Loads and displays the list of resource types.
  */
@@ -23,7 +25,7 @@ export async function loadRT() {
             <td>${r.name}</td>
             <td>${r.description || ''}</td>
             <td>${r.resource_category || ''}</td>
-            <td>${r.resource_cost ? r.resource_cost.toFixed(2) : ''}</td>
+            <td>${r.resource_cost ? formatNumberInput(r.resource_cost) : ''}</td>
             <td class="actions-cell">
                 <button class="edit-btn">Edit</button>
                 <button class="delete-btn" style="background:var(--red)">Del</button>
@@ -64,7 +66,7 @@ export function editRT(id) {
     document.getElementById('rt-name').value = rt.name;
     document.getElementById('rt-desc').value = rt.description || '';
     document.getElementById('rt-category').value = rt.resource_category || 'Labour';
-    document.getElementById('rt-cost').value = rt.resource_cost || '';
+    document.getElementById('rt-cost').value = rt.resource_cost ? formatNumberInput(rt.resource_cost) : '';
     window.openModal('rt');
 }
 
@@ -127,7 +129,7 @@ export async function showResourceTypeAuditTrail(id) {
                                     <td>${newData.name || ''}</td>
                                     <td>${newData.description || ''}</td>
                                     <td>${newData.resource_category || ''}</td>
-                                    <td>${newData.resource_cost ? parseFloat(newData.resource_cost).toFixed(2) : ''}</td>
+                                    <td>${newData.resource_cost ? formatNumberInput(parseFloat(newData.resource_cost)) : ''}</td>
                                 </tr>
                             `;
                         }).join('')}
@@ -193,10 +195,11 @@ export async function saveResourceType() {
     }
     const desc = document.getElementById('rt-desc').value;
     const resource_category = document.getElementById('rt-category').value;
-    const resource_cost = parseFloat(document.getElementById('rt-cost').value);
+    const resource_cost_input = document.getElementById('rt-cost').value;
+    const resource_cost = parseFormattedNumber(resource_cost_input);
     
-    if (document.getElementById('rt-cost').value && isNaN(resource_cost)) {
-        window.showMessage('Error', 'Resource Cost must be a valid number', 'error');
+    if (resource_cost_input && (isNaN(resource_cost) || resource_cost < 0)) {
+        window.showMessage('Error', 'Resource Cost must be a valid positive number', 'error');
         return;
     }
 
@@ -209,7 +212,7 @@ export async function saveResourceType() {
             name, 
             description: desc, 
             resource_category,
-            resource_cost: document.getElementById('rt-cost').value ? resource_cost.toFixed(2) : null
+            resource_cost: resource_cost_input ? resource_cost : null
         })
     });
     if (!res.ok) {
@@ -218,4 +221,19 @@ export async function saveResourceType() {
     }
     window.closeModal('rt');
     loadRT();
+}
+
+/**
+ * Handles input events for resource cost field
+ */
+export function handleResourceCostInput(input) {
+    // Allow typing without immediate formatting to avoid cursor jumping
+}
+
+/**
+ * Handles blur events for resource cost field - applies formatting
+ */
+export function handleResourceCostBlur(input) {
+    const rawValue = parseFormattedNumber(input.value);
+    input.value = formatNumberInput(rawValue);
 }

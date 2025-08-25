@@ -52,7 +52,7 @@ export function loadFactorPicker(searchQuery = '') {
   const manualResourceItems = (window.rtList || []).map(rt => ({
       id: `manual-${rt.id}`,
       name: rt.name,
-      description: rt.resource_category === 'Labour' ? 'Manual resource (hours)' : 'Manual resource (units)',
+      description: rt.description || '',
       resource_category: rt.resource_category,
       resource_type_id: rt.id,
       isChecked: false, // Manual resources don't have a "checked" state in the same way
@@ -156,25 +156,9 @@ function renderFactorItem(factor, container) {
     const checked = factor.isChecked ? 'checked' : '';
     const qty = window.selectedFactors.find(sf => sf.factorId === factor.id)?.quantity || '1';
     const qtyDisplay = factor.isChecked ? 'inline-block' : 'none';
-    const hrs = factor.hoursPerResourceType || {};
-    const vals = factor.valuePerResourceType || {};
     
-    const labourParts = Object.entries(hrs)
-        .filter(([, v]) => v > 0)
-        .map(([id, val]) => {
-            const r = window.rtList.find(x => x.id === id);
-            return r ? `${r.name}: ${val}h` : `${id}: ${val}h`;
-        });
-    
-    const nonLabourParts = Object.entries(vals)
-        .filter(([, v]) => v > 0)
-        .map(([id, val]) => {
-            const r = window.rtList.find(x => x.id === id);
-            return r ? `${r.name}: ${val}` : `${id}: ${val}`;
-        });
-    
-    const allResourceParts = [...labourParts, ...nonLabourParts];
-    const resourceDetails = allResourceParts.length > 0 ? `(${allResourceParts.join(', ')})` : '';
+    // Use the factor's description field as the subtitle
+    const description = factor.description || '';
 
     row.innerHTML = `
         <label class="custom-checkbox">
@@ -183,7 +167,7 @@ function renderFactorItem(factor, container) {
         </label>
         <div class="factor-item-content">
             <div class="factor-name"><strong>[pre-built]</strong> ${factor.name}</div>
-            <div class="factor-resources">${resourceDetails}</div>
+            <div class="factor-resources">${description}</div>
         </div>
         <input type="number" id="qty-${factor.id}" value="${qty}" min="1" oninput="window.updateFactorCalculations()" style="display:${qtyDisplay}">`;
     container.appendChild(row);
@@ -206,7 +190,7 @@ function renderManualResourceItem(resource, container) {
     let displayUnit = 'h';
     
     if (isNonLabour) {
-        displayValue = currentManualValues || '';
+        displayValue = currentManualValues > 0 ? formatNumberInput(currentManualValues) : '';
     } else {
         if (currentManualHours > 0) {
             if (currentManualHours % 8 === 0) {
@@ -220,19 +204,19 @@ function renderManualResourceItem(resource, container) {
     }
     
     if (isNonLabour) {
-        // For Non-Labour: show a numerical input for values
+        // For Non-Labour: show a numerical input for values with formatting
         row.innerHTML = `
             <div style="display: flex; align-items: center; width: 100%; gap: 8px;">
                 <div class="factor-item-content" style="flex: 1;">
                     <div class="factor-name">${resource.name}</div>
-                    <div class="factor-resources">(Manual ${resource.resource_category} Resource)</div>
+                    <div class="factor-resources">${resource.description}</div>
                 </div>
-                <input type="number" min="0" step="0.01" id="manual-${rtId}" 
-                       value="${displayValue}"
-                       style="width: 80px;" 
-                       placeholder="0"
-                       oninput="window.updateFactorCalculations()" 
-                       onblur="window.debouncedResort()">
+                <input type="text" id="manual-${rtId}" 
+                       value="${formatNumberInput(displayValue)}"
+                       style="width: 140px; text-align: right;" 
+                       placeholder="0.00"
+                       oninput="window.handleNonLabourInput(this)" 
+                       onblur="window.handleNonLabourBlur(this); window.debouncedResort()">
                 <span style="font-size: 0.9em; color: #666; width: 40px;">units</span>
             </div>
         `;
@@ -242,7 +226,7 @@ function renderManualResourceItem(resource, container) {
             <div style="display: flex; align-items: center; width: 100%; gap: 8px;">
                 <div class="factor-item-content" style="flex: 1;">
                     <div class="factor-name">${resource.name}</div>
-                    <div class="factor-resources">(Manual ${resource.resource_category} Resource)</div>
+                    <div class="factor-resources">${resource.description}</div>
                 </div>
                 <input type="number" min="0" id="manual-${rtId}" 
                        value="${displayValue}"
@@ -514,17 +498,25 @@ export function getManualResources() {
             const input = document.getElementById(`manual-${rt.id}`);
             const unitSelect = document.getElementById(`manual-unit-${rt.id}`);
             
-            if (input && input.value && +input.value > 0) {
-                let val = +input.value;
+            if (input && input.value) {
+                let val;
                 
                 if (rt.resource_category === 'Non-Labour') {
-                    manualValues[rt.id] = val;
-                } else {
-                    // For Labour: convert days to hours if needed
-                    if (unitSelect && unitSelect.value === 'd') {
-                        val *= 8;
+                    // Parse formatted number for non-labour resources
+                    val = parseFormattedNumber(input.value);
+                    if (val > 0) {
+                        manualValues[rt.id] = val;
                     }
-                    manualHours[rt.id] = val;
+                } else {
+                    // For Labour: handle regular numeric input
+                    val = +input.value;
+                    if (val > 0) {
+                        // Convert days to hours if needed
+                        if (unitSelect && unitSelect.value === 'd') {
+                            val *= 8;
+                        }
+                        manualHours[rt.id] = val;
+                    }
                 }
             }
         });
@@ -533,5 +525,46 @@ export function getManualResources() {
     }
     
     return { manualHours, manualValues };
+}
+
+/**
+ * Formats a number for display in the input field with commas and decimals
+ */
+export function formatNumberInput(value) {
+    if (!value || value === 0) return '';
+    const num = parseFloat(value);
+    if (isNaN(num)) return '';
+    return num.toLocaleString('en-US', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+    });
+}
+
+/**
+ * Parses a formatted number string back to a numeric value
+ */
+export function parseFormattedNumber(value) {
+    if (!value) return 0;
+    // Remove commas and parse
+    const cleaned = value.replace(/,/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+}
+
+/**
+ * Handles input events for non-labour value fields
+ */
+export function handleNonLabourInput(input) {
+    // Allow typing without immediate formatting to avoid cursor jumping
+    window.updateFactorCalculations();
+}
+
+/**
+ * Handles blur events for non-labour value fields - applies formatting
+ */
+export function handleNonLabourBlur(input) {
+    const rawValue = parseFormattedNumber(input.value);
+    input.value = formatNumberInput(rawValue);
+    window.updateFactorCalculations();
 }
 
