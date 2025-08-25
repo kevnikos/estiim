@@ -3,6 +3,8 @@
  * This allows storing manual resource allocations alongside selected factors.
  */
 
+export const version = '20250825000001';
+
 export async function up(db) {
     console.log('Adding manual_resources column to initiatives table...');
     

@@ -24,7 +24,16 @@ export default function createResourceTypesRouter(db) {
     router.post('/',
         body('name').notEmpty().withMessage('Name is required'),
         body('resource_category').isIn(['Labour', 'Non-Labour']).withMessage('Resource category must be Labour or Non-Labour'),
-        body('resource_cost').optional().isFloat({ min: 0 }).withMessage('Resource cost must be a positive number'),
+        body('resource_cost').optional().custom((value) => {
+            if (value === null || value === undefined || value === '') {
+                return true; // Allow null/empty values
+            }
+            const num = parseFloat(value);
+            if (isNaN(num) || num < 0) {
+                throw new Error('Resource cost must be a positive number');
+            }
+            return true;
+        }),
         async (req, res) => {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
@@ -39,7 +48,7 @@ export default function createResourceTypesRouter(db) {
                 name,
                 description: description || '',
                 resource_category: resource_category || 'Labour',
-                resource_cost: resource_cost || null
+                resource_cost: resource_cost !== null && resource_cost !== undefined ? resource_cost : 0
             };
             
             // Check if journal_entries column exists
@@ -59,13 +68,13 @@ export default function createResourceTypesRouter(db) {
                 
                 await db.run(
                     'INSERT INTO resource_types (id, name, description, resource_category, resource_cost, journal_entries) VALUES (?, ?, ?, ?, ?, ?)', 
-                    [newId, name, description, resource_category || 'Labour', resource_cost || null, JSON.stringify(journalEntries)]
+                    [newId, name, description, resource_category || 'Labour', resource_cost !== null && resource_cost !== undefined ? resource_cost : 0, JSON.stringify(journalEntries)]
                 );
             } else {
                 // Journal entries column doesn't exist yet, insert without it
                 await db.run(
                     'INSERT INTO resource_types (id, name, description, resource_category, resource_cost) VALUES (?, ?, ?, ?, ?)', 
-                    [newId, name, description, resource_category || 'Labour', resource_cost || null]
+                    [newId, name, description, resource_category || 'Labour', resource_cost !== null && resource_cost !== undefined ? resource_cost : 0]
                 );
             }
             
@@ -78,7 +87,16 @@ export default function createResourceTypesRouter(db) {
     router.put('/:id',
         body('name').notEmpty().withMessage('Name is required'),
         body('resource_category').isIn(['Labour', 'Non-Labour']).withMessage('Resource category must be Labour or Non-Labour'),
-        body('resource_cost').optional().isFloat({ min: 0 }).withMessage('Resource cost must be a positive number'),
+        body('resource_cost').optional().custom((value) => {
+            if (value === null || value === undefined || value === '') {
+                return true; // Allow null/empty values
+            }
+            const num = parseFloat(value);
+            if (isNaN(num) || num < 0) {
+                throw new Error('Resource cost must be a positive number');
+            }
+            return true;
+        }),
         async (req, res) => {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
@@ -99,14 +117,14 @@ export default function createResourceTypesRouter(db) {
                 name: existingRT.name,
                 description: existingRT.description || '',
                 resource_category: existingRT.resource_category || 'Labour',
-                resource_cost: existingRT.resource_cost || null
+                resource_cost: existingRT.resource_cost !== null && existingRT.resource_cost !== undefined ? existingRT.resource_cost : 0
             };
             
             const newDataForAudit = {
                 name,
                 description: description || '',
                 resource_category,
-                resource_cost
+                resource_cost: resource_cost !== null && resource_cost !== undefined ? resource_cost : 0
             };
             
             // Check if there are actual changes

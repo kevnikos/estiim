@@ -813,6 +813,56 @@ function getAuditDiffs(oldData, newData) {
             } 
         });
     }
+    
+    // Compare manual resources
+    try {
+        const oldManualResources = JSON.parse(oldData.manual_resources || '{}');
+        const newManualResources = JSON.parse(newData.manual_resources || '{}');
+        const oldManualStr = JSON.stringify(oldManualResources);
+        const newManualStr = JSON.stringify(newManualResources);
+        
+        if (oldManualStr !== newManualStr) {
+            const oldHours = oldManualResources.manualHours || {};
+            const newHours = newManualResources.manualHours || {};
+            const oldValues = oldManualResources.manualValues || {};
+            const newValues = newManualResources.manualValues || {};
+            
+            // Check for changes in manual hours (labour resources)
+            const allLabourResourceIds = new Set([...Object.keys(oldHours), ...Object.keys(newHours)]);
+            allLabourResourceIds.forEach(resourceId => {
+                const oldVal = oldHours[resourceId] || 0;
+                const newVal = newHours[resourceId] || 0;
+                const resourceName = window.rtList?.find(r => r.id === resourceId)?.name || resourceId;
+                
+                if (oldVal === 0 && newVal > 0) {
+                    diffs.push(`- <span class="diff-added">Added manual resource ${resourceName}: ${newVal}h</span>`);
+                } else if (oldVal > 0 && newVal === 0) {
+                    diffs.push(`- <span class="diff-removed">Removed manual resource ${resourceName} (was ${oldVal}h)</span>`);
+                } else if (oldVal !== newVal) {
+                    diffs.push(`- Changed manual hours for ${resourceName} from <span class="diff-removed">${oldVal}h</span> to <span class="diff-added">${newVal}h</span>`);
+                }
+            });
+            
+            // Check for changes in manual values (non-labour resources)
+            const allNonLabourResourceIds = new Set([...Object.keys(oldValues), ...Object.keys(newValues)]);
+            allNonLabourResourceIds.forEach(resourceId => {
+                const oldVal = oldValues[resourceId] || 0;
+                const newVal = newValues[resourceId] || 0;
+                const resourceName = window.rtList?.find(r => r.id === resourceId)?.name || resourceId;
+                
+                if (oldVal === 0 && newVal > 0) {
+                    diffs.push(`- <span class="diff-added">Added manual non-labour resource ${resourceName}: ${newVal}</span>`);
+                } else if (oldVal > 0 && newVal === 0) {
+                    diffs.push(`- <span class="diff-removed">Removed manual non-labour resource ${resourceName} (was ${oldVal})</span>`);
+                } else if (oldVal !== newVal) {
+                    diffs.push(`- Changed manual value for ${resourceName} from <span class="diff-removed">${oldVal}</span> to <span class="diff-added">${newVal}</span>`);
+                }
+            });
+        }
+    } catch (e) {
+        console.error('Error comparing manual resources for audit:', e);
+    }
+    
     return diffs;
 }
 

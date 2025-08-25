@@ -23,6 +23,7 @@ import * as categoriesMigration from './migrations/20250823000007_add_categories
 import * as resourceTypePropertiesMigration from './migrations/20250824000001_add_resource_type_properties.js';
 import * as resourceTypesAuditMigration from './migrations/20250824000002_add_resource_types_audit.js';
 import * as valuePerResourceTypeMigration from './migrations/20250824000003_add_value_per_resource_type.js';
+import * as manualResourcesMigration from './migrations/20250825000001_add_manual_resources.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,7 +59,8 @@ const migrations = [
   categoriesMigration,
   resourceTypePropertiesMigration,
   resourceTypesAuditMigration,
-  valuePerResourceTypeMigration
+  valuePerResourceTypeMigration,
+  manualResourcesMigration
 ];
 
 /**
