@@ -34,7 +34,7 @@ export function loadPreferences() {
 export async function savePreferences() {
     window.userPreferences.initiativeStatusFilter = document.getElementById('init-status-filter').value; // Save the status filter
     window.userPreferences.enableBranding = document.getElementById('branding-checkbox').checked;
-    const newFrequency = parseInt(document.getElementById('backup-frequency').value, 10) || 30;
+    const newFrequency = parseInt(document.getElementById('backupFrequency').value, 10) || 30;
     window.userPreferences.backupFrequency = newFrequency;
 
     // Update server backup frequency if it changed
@@ -78,7 +78,7 @@ export function populatePrefsPage() {
     if (brandingCheckbox) {
         brandingCheckbox.checked = window.userPreferences.enableBranding !== false;
     }
-    const backupFrequency = document.getElementById('backup-frequency');
+    const backupFrequency = document.getElementById('backupFrequency');
     if (backupFrequency) {
         backupFrequency.value = window.userPreferences.backupFrequency || 30;
     }

@@ -257,10 +257,33 @@ export async function incrementCategoryUsage(id) {
 }
 
 /**
+ * Clean up any existing category management sections
+ */
+function cleanupCategoryManagement() {
+    const prefsContent = document.getElementById('preferences-content');
+    if (!prefsContent) return;
+    
+    // Remove any existing categories management cards
+    const categoriesSections = Array.from(prefsContent.querySelectorAll('div.card')).filter(card => {
+        const h3 = card.querySelector('h3');
+        return h3 && h3.textContent.trim() === 'Categories';
+    });
+    
+    categoriesSections.forEach(section => {
+        console.log('Removing existing categories section');
+        section.remove();
+    });
+}
+
+/**
  * Initialize category management in the preferences section
  */
 export async function initCategoryManagement() {
     console.log('Initializing category management');
+    
+    // Clean up any existing sections first
+    cleanupCategoryManagement();
+    
     const prefsContent = document.getElementById('preferences-content');
     if (!prefsContent) {
         console.error('Preferences content container not found');
@@ -276,6 +299,7 @@ export async function initCategoryManagement() {
     
     const categoriesSection = document.createElement('div');
     categoriesSection.className = 'card';
+    categoriesSection.id = 'categories-management-card'; // Add unique ID
     categoriesSection.innerHTML = `
         <h3>Categories</h3>
         <div class="pref-content">
