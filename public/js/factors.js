@@ -420,9 +420,9 @@ function getFactorAuditDiffs(oldData, newData) {
     // Compare hoursPerResourceType
     const oldHours = oldData.hoursPerResourceType || {};
     const newHours = newData.hoursPerResourceType || {};
-    const allResourceIds = new Set([...Object.keys(oldHours), ...Object.keys(newHours)]);
+    const allLabourResourceIds = new Set([...Object.keys(oldHours), ...Object.keys(newHours)]);
     
-    allResourceIds.forEach(resId => {
+    allLabourResourceIds.forEach(resId => {
         const oldVal = oldHours[resId] || 0;
         const newVal = newHours[resId] || 0;
         const resourceName = window.rtList.find(r => r.id === resId)?.name || resId;
@@ -435,5 +435,25 @@ function getFactorAuditDiffs(oldData, newData) {
             diffs.push(`- Changed hours for ${resourceName} from <span class="diff-removed">${oldVal}h</span> to <span class="diff-added">${newVal}h</span>`);
         }
     });
+
+    // Compare valuePerResourceType
+    const oldValues = oldData.valuePerResourceType || {};
+    const newValues = newData.valuePerResourceType || {};
+    const allNonLabourResourceIds = new Set([...Object.keys(oldValues), ...Object.keys(newValues)]);
+    
+    allNonLabourResourceIds.forEach(resId => {
+        const oldVal = oldValues[resId] || 0;
+        const newVal = newValues[resId] || 0;
+        const resourceName = window.rtList.find(r => r.id === resId)?.name || resId;
+
+        if (oldVal === 0 && newVal > 0) {
+            diffs.push(`- <span class="diff-added">Added non-labour resource ${resourceName} with value ${newVal}</span>`);
+        } else if (oldVal > 0 && newVal === 0) {
+            diffs.push(`- <span class="diff-removed">Removed non-labour resource ${resourceName} (was ${oldVal})</span>`);
+        } else if (oldVal !== newVal) {
+            diffs.push(`- Changed value for ${resourceName} from <span class="diff-removed">${oldVal}</span> to <span class="diff-added">${newVal}</span>`);
+        }
+    });
+
     return diffs;
 }

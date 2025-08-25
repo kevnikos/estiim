@@ -155,7 +155,8 @@ export default function createEstimationFactorsRouter(db) {
 
             if (oldDataForAudit.name !== newDataForAudit.name || 
                 oldDataForAudit.description !== newDataForAudit.description ||
-                !areHoursPerResourceTypeEqual(oldDataForAudit.hoursPerResourceType, newDataForAudit.hoursPerResourceType)) {
+                !areHoursPerResourceTypeEqual(oldDataForAudit.hoursPerResourceType, newDataForAudit.hoursPerResourceType) ||
+                !areHoursPerResourceTypeEqual(oldDataForAudit.valuePerResourceType, newDataForAudit.valuePerResourceType)) {
                 
                 const auditEntry = {
                     timestamp: now, type: 'audit', action: 'updated',
