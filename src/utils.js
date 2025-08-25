@@ -8,7 +8,18 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_FILE_PATH = path.join(__dirname, 'estiim.db');
+
+// Determine the database file path based on environment (same logic as database.js)
+const getDbPath = () => {
+  // If running in Docker (can be set in docker-compose.yml or Dockerfile)
+  if (process.env.DOCKER_ENV === 'true') {
+    return path.join(__dirname, 'data', 'estiim.db');
+  }
+  // Default path for local development
+  return path.join(__dirname, 'estiim.db');
+};
+
+const DB_FILE_PATH = getDbPath();
 const BACKUPS_DIR = path.join(__dirname, 'backups');
 
 /**

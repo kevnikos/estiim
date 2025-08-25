@@ -7,9 +7,9 @@ services:
     # Map port 3000 on the host to port 3000 in the container
     ports:
       - "3000:3000"
-    # Mount a volume to persist the SQLite database
-    # This links the './data' directory on your machine to the '/app/src/data' directory in the container
+    # Mount volumes to persist the SQLite database and backups
     volumes:
       - ./data:/app/src/data
+      - ./backups:/app/src/backups
     environment:
       - DOCKER_ENV=true
