@@ -6,6 +6,37 @@ import { formatDateInEST } from './ui.js';
 import { formatNumberInput, parseFormattedNumber } from './factorPicker.js';
 
 /**
+ * Calculate the total cost for an estimation factor
+ * @param {Object} factor - The estimation factor object
+ * @returns {number} - The total cost
+ */
+function calculateTotalCost(factor) {
+  let totalCost = 0;
+  
+  // Calculate labour costs (hours * resource cost)
+  const hrs = factor.hoursPerResourceType || {};
+  Object.entries(hrs).forEach(([resourceId, hours]) => {
+    if (hours > 0) {
+      const resourceType = window.rtList.find(rt => rt.id === resourceId);
+      const resourceCost = resourceType?.resource_cost || 0;
+      totalCost += hours * resourceCost;
+    }
+  });
+  
+  // Calculate non-labour costs (units * resource cost)
+  const vals = factor.valuePerResourceType || {};
+  Object.entries(vals).forEach(([resourceId, units]) => {
+    if (units > 0) {
+      const resourceType = window.rtList.find(rt => rt.id === resourceId);
+      const resourceCost = resourceType?.resource_cost || 0;
+      totalCost += units * resourceCost;
+    }
+  });
+  
+  return totalCost;
+}
+
+/**
  * Loads and displays the list of estimation factors.
  */
 export async function loadEF() {
@@ -42,12 +73,15 @@ export async function loadEF() {
     
     const total = Object.values(hrs).reduce((a, b) => a + b, 0);
     const days = (total / 8).toFixed(1);
+    const totalCost = calculateTotalCost(f);
+    const formattedTotalCost = totalCost > 0 ? `$${totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '$0.00';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${f.name}</td>
       <td>${allNames}</td>
       <td>${days}</td>
       <td>${total}</td>
+      <td>${formattedTotalCost}</td>
       <td style="white-space:nowrap;">
         <button onclick="window.editEF('${f.id}')">Edit</button>
         <button onclick="window.delEF('${f.id}')" style="background:var(--red)">Del</button>

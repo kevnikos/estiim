@@ -3,6 +3,89 @@
  * Handles all CRUD operations, event handling, and UI rendering for the Initiatives section.
  */
 import { formatDateInEST } from './ui.js';
+
+/**
+ * Calculate the total cost for an initiative considering both pre-built factors and manual resources
+ * @param {Object} initiative - The initiative object
+ * @returns {number} - The total cost
+ */
+function calculateInitiativeTotalCost(initiative) {
+  let totalCost = 0;
+  
+  // Calculate costs from pre-built factors
+  if (initiative.selected_factors) {
+    let selectedFactors;
+    try {
+      selectedFactors = typeof initiative.selected_factors === 'string' 
+        ? JSON.parse(initiative.selected_factors) 
+        : initiative.selected_factors;
+    } catch (e) {
+      selectedFactors = [];
+    }
+    
+    selectedFactors.forEach(factorId => {
+      const factor = window.efList?.find(ef => ef.id === factorId);
+      if (factor) {
+        // Calculate labour costs from factors
+        const hrs = factor.hoursPerResourceType || {};
+        Object.entries(hrs).forEach(([resourceId, hours]) => {
+          if (hours > 0) {
+            const resourceType = window.rtList?.find(rt => rt.id === resourceId);
+            const resourceCost = resourceType?.resource_cost || 0;
+            totalCost += hours * resourceCost;
+          }
+        });
+        
+        // Calculate non-labour costs from factors
+        const vals = factor.valuePerResourceType || {};
+        Object.entries(vals).forEach(([resourceId, units]) => {
+          if (units > 0) {
+            const resourceType = window.rtList?.find(rt => rt.id === resourceId);
+            const resourceCost = resourceType?.resource_cost || 0;
+            totalCost += units * resourceCost;
+          }
+        });
+      }
+    });
+  }
+  
+  // Calculate costs from manual resources
+  if (initiative.manual_resources) {
+    let manualData;
+    try {
+      manualData = typeof initiative.manual_resources === 'string' 
+        ? JSON.parse(initiative.manual_resources) 
+        : initiative.manual_resources;
+    } catch (e) {
+      manualData = {};
+    }
+    
+    // Manual labour hours
+    if (manualData.manualHours) {
+      Object.entries(manualData.manualHours).forEach(([resourceId, hours]) => {
+        if (hours > 0) {
+          const resourceType = window.rtList?.find(rt => rt.id === resourceId);
+          const resourceCost = resourceType?.resource_cost || 0;
+          totalCost += hours * resourceCost;
+        }
+      });
+    }
+    
+    // Manual non-labour values
+    if (manualData.manualValues) {
+      Object.entries(manualData.manualValues).forEach(([resourceId, units]) => {
+        if (units > 0) {
+          const resourceType = window.rtList?.find(rt => rt.id === resourceId);
+          const resourceCost = resourceType?.resource_cost || 0;
+          totalCost += units * resourceCost;
+        }
+      });
+    }
+  }
+  
+  return totalCost;
+}
+
 // Cookie utility functions
 function setCookie(name, value, days) {
     let expires = "";
@@ -144,6 +227,9 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
     console.log('Creating row for initiative:', i);
     const tr = document.createElement('tr');
     try {
+      const totalCost = calculateInitiativeTotalCost(i);
+      const formattedTotalCost = totalCost > 0 ? `$${totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '$0.00';
+      
       tr.innerHTML = `
         <td>${i.id || ''}</td>
         <td>${i.custom_id || ''}</td>
@@ -153,6 +239,7 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
         <td>${i.status || ''}</td>
         <td>${i.shirt_size || ''}</td>
         <td>${i.computed_hours || 0}</td>
+        <td>${formattedTotalCost}</td>
         <td>${i.estimated_duration || ''}</td>
         <td>${(typeof i.categories === 'string' ? JSON.parse(i.categories || '[]') : (i.categories || [])).map(cat => `<span class="category-tag">${cat}</span>`).join('')}</td>
         <td>${formatDateInEST(i.created_at, true)}</td>
