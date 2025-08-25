@@ -17,10 +17,14 @@ export async function loadEF() {
   const filteredFactors = window.efList.filter(f => {
     const factorName = f.name.toLowerCase();
     const factorDescription = (f.description || '').toLowerCase();
-    const resourceNames = Object.entries(f.hoursPerResourceType || {})
+    const labourResourceNames = Object.entries(f.hoursPerResourceType || {})
       .map(([id]) => (window.rtList.find(x => x.id === id)?.name || '').toLowerCase())
       .join(' ');
-    return factorName.includes(searchQuery) || factorDescription.includes(searchQuery) || resourceNames.includes(searchQuery);
+    const nonLabourResourceNames = Object.entries(f.valuePerResourceType || {})
+      .map(([id]) => (window.rtList.find(x => x.id === id)?.name || '').toLowerCase())
+      .join(' ');
+    const allResourceNames = labourResourceNames + ' ' + nonLabourResourceNames;
+    return factorName.includes(searchQuery) || factorDescription.includes(searchQuery) || allResourceNames.includes(searchQuery);
   }).sort((a, b) => a.name.localeCompare(b.name));
 
   const tbody = document.querySelector('#ef-table tbody');
@@ -29,13 +33,18 @@ export async function loadEF() {
 
   itemsToDisplay.forEach(f => {
     const hrs = f.hoursPerResourceType || {};
-    const names = Object.entries(hrs).filter(([,v]) => v > 0).map(([id]) => window.rtList.find(x => x.id === id)?.name || id).join(',');
+    const vals = f.valuePerResourceType || {};
+    
+    const labourNames = Object.entries(hrs).filter(([,v]) => v > 0).map(([id]) => window.rtList.find(x => x.id === id)?.name || id);
+    const nonLabourNames = Object.entries(vals).filter(([,v]) => v > 0).map(([id]) => window.rtList.find(x => x.id === id)?.name || id);
+    const allNames = [...labourNames, ...nonLabourNames].join(',');
+    
     const total = Object.values(hrs).reduce((a, b) => a + b, 0);
     const days = (total / 8).toFixed(1);
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${f.name}</td>
-      <td>${names}</td>
+      <td>${allNames}</td>
       <td>${days}</td>
       <td>${total}</td>
       <td style="white-space:nowrap;">

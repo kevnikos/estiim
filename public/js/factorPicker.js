@@ -50,10 +50,14 @@ export function loadFactorPicker(searchQuery = '') {
     .filter(f => {
       const factorName = f.name.toLowerCase();
       const factorDescription = (f.description || '').toLowerCase();
-      const resourceNames = Object.entries(f.hoursPerResourceType || {})
+      const labourResourceNames = Object.entries(f.hoursPerResourceType || {})
         .map(([id]) => (window.rtList.find(x => x.id === id)?.name || '').toLowerCase())
         .join(' ');
-      return factorName.includes(lowerCaseSearchQuery) || factorDescription.includes(lowerCaseSearchQuery) || resourceNames.includes(lowerCaseSearchQuery);
+      const nonLabourResourceNames = Object.entries(f.valuePerResourceType || {})
+        .map(([id]) => (window.rtList.find(x => x.id === id)?.name || '').toLowerCase())
+        .join(' ');
+      const allResourceNames = labourResourceNames + ' ' + nonLabourResourceNames;
+      return factorName.includes(lowerCaseSearchQuery) || factorDescription.includes(lowerCaseSearchQuery) || allResourceNames.includes(lowerCaseSearchQuery);
     })
     .sort((a, b) => {
         if (a.isChecked && !b.isChecked) return -1;
@@ -68,13 +72,24 @@ export function loadFactorPicker(searchQuery = '') {
     const qty = window.selectedFactors.find(sf => sf.factorId === f.id)?.quantity || '1';
     const qtyDisplay = f.isChecked ? 'inline-block' : 'none';
     const hrs = f.hoursPerResourceType || {};
-    const resourceParts = Object.entries(hrs)
+    const vals = f.valuePerResourceType || {};
+    
+    const labourParts = Object.entries(hrs)
         .filter(([, v]) => v > 0)
         .map(([id, val]) => {
             const r = window.rtList.find(x => x.id === id);
             return r ? `${r.name}: ${val}h` : `${id}: ${val}h`;
         });
-    const resourceDetails = resourceParts.length > 0 ? `(${resourceParts.join(', ')})` : '';
+    
+    const nonLabourParts = Object.entries(vals)
+        .filter(([, v]) => v > 0)
+        .map(([id, val]) => {
+            const r = window.rtList.find(x => x.id === id);
+            return r ? `${r.name}: ${val}` : `${id}: ${val}`;
+        });
+    
+    const allResourceParts = [...labourParts, ...nonLabourParts];
+    const resourceDetails = allResourceParts.length > 0 ? `(${allResourceParts.join(', ')})` : '';
 
     row.innerHTML = `
         <label class="custom-checkbox">
