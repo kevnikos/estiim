@@ -53,11 +53,16 @@ Object.assign(window, categories);
 // --- Navigation ---
 // The main navigation function for showing/hiding sections.
 window.show = function(hash) {
+  console.log('Navigating to:', hash); // Debug log
   document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
   const id = (hash || '#home').slice(1);
   const sec = document.getElementById(id);
   if (sec) {
       sec.classList.add('active');
+      // Update the URL hash
+      if (window.location.hash !== hash) {
+          window.location.hash = hash;
+      }
       const headerHeight = document.getElementById('main-header').offsetHeight;
       setTimeout(() => {
           window.scrollTo({
@@ -65,6 +70,8 @@ window.show = function(hash) {
               behavior: 'smooth'
           });
       }, 50);
+  } else {
+      console.warn('Section not found:', id);
   }
 
   // Load data for the shown section
@@ -88,6 +95,10 @@ window.show = function(hash) {
       }
     }, 100);
   }
+  if (id === 'backups') {
+    window.refreshBackupList();
+  }
+  // About page is static content, no initialization needed
   
   // Close the flyout menu if it's open
   const flyoutMenu = document.getElementById('flyout-menu');

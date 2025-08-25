@@ -779,7 +779,7 @@ footer {
 </head>
 <body>
 <header id="main-header">
-  <h1 onclick="window.show('#home')">Estiim</h1>
+  <h1 onclick="window.show('#home')" style="cursor: pointer;">Estiim</h1>
   <div class="flyout-menu-container">
     <!-- Double Gear Icon SVG from provided code -->
     <svg class="gear-icon" onclick="window.toggleFlyoutMenu()" height="28px" width="28px" version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -844,6 +844,7 @@ footer {
     <a href="#shirt-sizes" onclick="window.show('#shirt-sizes')">Shirt Sizes</a>
     <a href="#backups" onclick="window.show('#backups')">Backups</a>
     <a href="#prefs" onclick="window.show('#prefs')">Prefs</a>
+    <a href="#about" onclick="window.show('#about')">About</a>
 </div>
 
 <section id="home" class="active">
@@ -1043,6 +1044,108 @@ footer {
       <div class="table-container" style="margin-top: 12px;">
         <div id="backupsList">
           Loading backups...
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="about">
+  <div class="card">
+    <h2>About Estiim</h2>
+    <div style="display: grid; gap: 24px;">
+      
+      <!-- Build Information -->
+      <div>
+        <h3 style="margin-bottom: 12px; color: var(--primary);">Build Information</h3>
+        <div style="background: var(--background); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+          <p><strong>Version:</strong> R20250825000000</p>
+          <p><strong>Built:</strong> August 25, 2025</p>
+          <p><strong>Platform:</strong> Node.js + SQLite</p>
+          <p><strong>Architecture:</strong> ES6 Modules + RESTful API</p>
+        </div>
+      </div>
+
+      <!-- Release Notes -->
+      <div>
+        <h3 style="margin-bottom: 12px; color: var(--primary);">Release Notes</h3>
+        <div style="background: var(--background); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+          
+          <div style="margin-bottom: 20px;">
+            <h4 style="margin-bottom: 8px; color: var(--blue);">Version R20250804161100 - August 2025</h4>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li>✨ <strong>Unified T-Shirt Factors Modal:</strong> Combined pre-built factors and manual resources with advanced search and sorting</li>
+              <li>💰 <strong>Total Cost Calculations:</strong> Added cost visibility across factors and initiatives</li>
+              <li>📊 <strong>Enhanced Export System:</strong> Complete TSV exports with Labour/Non-Labour separation</li>
+              <li>🔍 <strong>Consistent Audit Trails:</strong> Unified diff highlighting across all modules</li>
+              <li>📁 <strong>Advanced Backup Management:</strong> Hierarchical date grouping with delete functionality</li>
+              <li>🎨 <strong>UI/UX Improvements:</strong> Number formatting, value preservation, and responsive design</li>
+            </ul>
+          </div>
+
+          <div style="margin-bottom: 20px;">
+            <h4 style="margin-bottom: 8px; color: var(--blue);">Previous Releases</h4>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li>🏗️ <strong>Core Foundation:</strong> Initial T-shirt sizing estimator with resource management</li>
+              <li>📋 <strong>Initiative Tracking:</strong> Project management with status filtering and categorization</li>
+              <li>⚙️ <strong>Configuration Management:</strong> Customizable factors, shirt sizes, and preferences</li>
+              <li>💾 <strong>Data Persistence:</strong> SQLite database with migration system</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 style="margin-bottom: 8px; color: var(--blue);">Technical Features</h4>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li>🔧 Modern JavaScript ES6+ modules</li>
+              <li>🎯 RESTful API architecture</li>
+              <li>📱 Responsive web design</li>
+              <li>🛡️ Input validation and sanitization</li>
+              <li>📈 Real-time calculations and updates</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Info -->
+      <div>
+        <h3 style="margin-bottom: 12px; color: var(--primary);">System Information</h3>
+        <div style="background: var(--background); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+          <p><strong>Application:</strong> T-Shirt Sizing Estimation Tool</p>
+          <p><strong>Purpose:</strong> Project estimation using t-shirt sizing methodology</p>
+          <p><strong>License:</strong> Internal Use</p>
+          <p style="margin-top: 12px; font-size: 14px; color: var(--secondary);">
+            Built with ❤️ for efficient project estimation and resource planning.
+          </p>
+        </div>
+      </div>
+
+      <!-- Contributors -->
+      <div>
+        <h3 style="margin-bottom: 12px; color: var(--primary);">Contributors</h3>
+        <div style="background: var(--background); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+          <div style="display: grid; gap: 12px;">
+            <div>
+              <p><strong>🎨 Lead Designer:</strong> kevnikos</p>
+              <p style="font-size: 14px; color: var(--secondary); margin-left: 20px;">
+                Architecture, UI/UX design, and product vision
+              </p>
+            </div>
+            <div>
+              <p><strong>🧪 Testers:</strong> christos7799, kevnikos</p>
+              <p style="font-size: 14px; color: var(--secondary); margin-left: 20px;">
+                Quality assurance, feature validation, and user feedback
+              </p>
+            </div>
+            <div>
+              <p><strong>🤖 Coder:</strong> AI</p>
+              <p style="font-size: 14px; color: var(--secondary); margin-left: 20px;">
+                Implementation, debugging, and technical optimization
+              </p>
+            </div>
+          </div>
+          <p style="margin-top: 16px; font-size: 14px; color: var(--secondary); text-align: center;">
+            A collaborative effort between human creativity and artificial intelligence
+          </p>
         </div>
       </div>
     </div>
@@ -1267,7 +1370,7 @@ footer {
 </div>
 
 <footer>
-    Build R20250804161100
+    <!-- Footer content removed - build info moved to About page -->
 </footer>
 
 <!-- Refactored script includes -->
