@@ -37,6 +37,18 @@ export async function openFactorModal() {
  */
 export function loadFactorPicker(searchQuery = '') {
   const area = document.getElementById('factor-picker');
+  
+  // Preserve current manual resource values before clearing
+  const currentManualValues = {};
+  if (window.rtList) {
+    window.rtList.forEach(rt => {
+      const input = document.getElementById(`manual-${rt.id}`);
+      if (input && input.value) {
+        currentManualValues[rt.id] = input.value;
+      }
+    });
+  }
+  
   area.innerHTML = '';
   
   const lowerCaseSearchQuery = searchQuery.toLowerCase();
@@ -135,7 +147,7 @@ export function loadFactorPicker(searchQuery = '') {
     if (item.type === 'factor') {
         renderFactorItem(item, area);
     } else {
-        renderManualResourceItem(item, area);
+        renderManualResourceItem(item, area, currentManualValues);
     }
   });
   
@@ -176,7 +188,7 @@ function renderFactorItem(factor, container) {
 /**
  * Renders a manual resource item in the picker.
  */
-function renderManualResourceItem(resource, container) {
+function renderManualResourceItem(resource, container, preservedValues = {}) {
     const row = document.createElement('div');
     row.className = 'factor-item manual-resource-item';
     
@@ -190,9 +202,20 @@ function renderManualResourceItem(resource, container) {
     let displayUnit = 'h';
     
     if (isNonLabour) {
-        displayValue = currentManualValues > 0 ? formatNumberInput(currentManualValues) : '';
+        // Use preserved value if available (user was typing), otherwise use stored value
+        if (preservedValues[rtId]) {
+            displayValue = preservedValues[rtId];
+        } else {
+            displayValue = currentManualValues > 0 ? formatNumberInput(currentManualValues) : '';
+        }
     } else {
-        if (currentManualHours > 0) {
+        // For labour resources, also check for preserved values
+        if (preservedValues[rtId]) {
+            displayValue = preservedValues[rtId];
+            // Try to determine unit from preserved value format
+            const numValue = parseFloat(preservedValues[rtId]);
+            displayUnit = (numValue > 0 && numValue % 8 === 0) ? 'd' : 'h';
+        } else if (currentManualHours > 0) {
             if (currentManualHours % 8 === 0) {
                 displayValue = currentManualHours / 8;
                 displayUnit = 'd';
