@@ -212,7 +212,7 @@ function renderManualResourceItem(resource, container) {
                     <div class="factor-resources">${resource.description}</div>
                 </div>
                 <input type="text" id="manual-${rtId}" 
-                       value="${formatNumberInput(displayValue)}"
+                       value="${displayValue}"
                        style="width: 140px; text-align: right;" 
                        placeholder="0.00"
                        oninput="window.handleNonLabourInput(this)" 
