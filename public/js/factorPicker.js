@@ -279,7 +279,7 @@ function renderManualResourceItem(resource, container, preservedValues = {}) {
                 </div>
                 <input type="number" min="0" id="manual-${rtId}" 
                        value="${displayValue}"
-                       style="width: 60px;" 
+                       style="width: 80px;" 
                        placeholder="0"
                        oninput="window.updateFactorCalculations()" 
                        onblur="window.debouncedResort()">

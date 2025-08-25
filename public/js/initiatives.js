@@ -368,7 +368,23 @@ export async function saveInitiative() {
     if (!name) { 
         window.showMessage('Error', 'Name required', 'error');
         return;
-    } 
+    }
+    
+    // Check for unsaved comment
+    const commentInput = document.getElementById('journal-comment-input');
+    if (commentInput && commentInput.value.trim()) {
+        const userWantsToSaveComment = confirm(
+            'You have an unsaved comment. Would you like to add it to the journal before saving the initiative?\n\n' +
+            'Click "OK" to add the comment first, or "Cancel" to save without the comment.'
+        );
+        
+        if (userWantsToSaveComment) {
+            // Add the comment first
+            window.addJournalEntry();
+            // Note: The comment will be added and the save will continue
+        }
+        // If they chose Cancel, we continue with the save without adding the comment
+    }
     
     // Get the categories ready for the payload
     let categories = Array.isArray(window.selectedCategories) ? window.selectedCategories : 
