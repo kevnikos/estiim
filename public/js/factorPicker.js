@@ -10,8 +10,22 @@
 export function renderSelectedFactorsSummary() {
     const summary = document.getElementById('selected-factors-summary');
     if (summary) {
+        let totalSelected = 0;
+        
+        // Count prebuilt factors
         if (window.selectedFactors && window.selectedFactors.length > 0) {
-            summary.innerHTML = `<p>${window.selectedFactors.length} factor(s) selected.</p>`;
+            totalSelected += window.selectedFactors.length;
+        }
+        
+        // Count manual resources (both hours and values)
+        if (window.manualResources) {
+            const manualHoursCount = Object.keys(window.manualResources.manualHours || {}).length;
+            const manualValuesCount = Object.keys(window.manualResources.manualValues || {}).length;
+            totalSelected += manualHoursCount + manualValuesCount;
+        }
+        
+        if (totalSelected > 0) {
+            summary.innerHTML = `<p>${totalSelected} factor(s) selected.</p>`;
         } else {
             summary.innerHTML = `<p>No factors selected.</p>`;
         }
