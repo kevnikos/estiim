@@ -59,7 +59,7 @@ export async function addEstimationFactor() {
       const inp = document.getElementById(`ef-h-${rt.id}`);
       if (inp) inp.value = '';
       const sel = document.getElementById(`ef-u-${rt.id}`);
-      if (sel) sel.value = 'h';
+      if (sel) sel.value = 'h'; // Only set if selector exists (Labour resource types)
   });
   document.getElementById('ef-created').textContent = '';
   document.getElementById('ef-updated').textContent = '';
@@ -86,17 +86,34 @@ export async function editEF(id) {
   document.getElementById('ef-description').value = f.description || '';
   renderEFGrid();
   const hrs = f.hoursPerResourceType || {};
+  const vals = f.valuePerResourceType || {};
+  
   Object.entries(hrs).forEach(([rtId, val]) => {
     const inp = document.getElementById(`ef-h-${rtId}`);
     const sel = document.getElementById(`ef-u-${rtId}`);
-    if (inp) {
-      if (val % 8 === 0) {
-        inp.value = val / 8;
-        sel.value = 'd';
-      } else {
-        inp.value = val;
-        sel.value = 'h';
+    const rt = window.rtList.find(r => r.id === rtId);
+    
+    if (inp && rt && rt.resource_category === 'Labour') {
+      // For Labour, handle hours/days conversion as before
+      if (sel) {
+        if (val % 8 === 0) {
+          inp.value = val / 8;
+          sel.value = 'd';
+        } else {
+          inp.value = val;
+          sel.value = 'h';
+        }
       }
+    }
+  });
+
+  Object.entries(vals).forEach(([rtId, val]) => {
+    const inp = document.getElementById(`ef-h-${rtId}`);
+    const rt = window.rtList.find(r => r.id === rtId);
+    
+    if (inp && rt && rt.resource_category === 'Non-Labour') {
+      // For Non-Labour, just set the raw value (no conversion)
+      inp.value = val;
     }
   });
   document.getElementById('ef-created').textContent = formatDateInEST(f.created_at);
@@ -129,14 +146,21 @@ export async function saveEstimationFactor() {
     }
     const description = document.getElementById('ef-description').value.trim();
     const hours = {};
+    const values = {};
     (window.rtList || []).forEach(rt => {
         const inp = document.getElementById(`ef-h-${rt.id}`);
         const sel = document.getElementById(`ef-u-${rt.id}`);
         if (!inp) return;
         let val = +inp.value;
         if (val > 0) {
-            if (sel.value === 'd') val *= 8;
-            hours[rt.id] = val;
+            if (rt.resource_category === 'Non-Labour') {
+                // For Non-Labour, store the raw value in valuePerResourceType
+                values[rt.id] = val;
+            } else {
+                // For Labour, handle hours/days conversion and store in hoursPerResourceType
+                if (sel && sel.value === 'd') val *= 8;
+                hours[rt.id] = val;
+            }
         }
     });
 
@@ -144,6 +168,7 @@ export async function saveEstimationFactor() {
         name,
         description,
         hoursPerResourceType: hours,
+        valuePerResourceType: values,
         journal_entries: window.currentEstimationFactorJournal
     };
 
@@ -176,14 +201,21 @@ export async function duplicateEstimationFactor() {
     const newName = originalName + " Copy";
     const description = document.getElementById('ef-description').value.trim();
     const hours = {};
+    const values = {};
     (window.rtList || []).forEach(rt => {
         const inp = document.getElementById(`ef-h-${rt.id}`);
         const sel = document.getElementById(`ef-u-${rt.id}`);
         if (inp) {
             let val = +inp.value;
             if (val > 0) {
-                if (sel.value === 'd') val *= 8;
-                hours[rt.id] = val;
+                if (rt.resource_category === 'Non-Labour') {
+                    // For Non-Labour, store the raw value in valuePerResourceType
+                    values[rt.id] = val;
+                } else {
+                    // For Labour, handle hours/days conversion and store in hoursPerResourceType
+                    if (sel && sel.value === 'd') val *= 8;
+                    hours[rt.id] = val;
+                }
             }
         }
     });
@@ -199,6 +231,7 @@ export async function duplicateEstimationFactor() {
         name: newName,
         description: description,
         hoursPerResourceType: hours,
+        valuePerResourceType: values,
         journal_entries: [newJournalEntry]
     };
 
@@ -230,7 +263,31 @@ export function renderEFGrid() {
     (window.rtList || []).forEach(rt => {
         const row = document.createElement('div');
         row.className = 'flex';
-        row.innerHTML = `<label style="width:120px">${rt.name}</label><input type="number" min="0" id="ef-h-${rt.id}"><select id="ef-u-${rt.id}"><option value="h">h</option><option value="d">d</option></select>`;
+        
+        // Check if resource type is Non-Labour
+        const isNonLabour = rt.resource_category === 'Non-Labour';
+        
+        if (isNonLabour) {
+            // For Non-Labour: show a larger input box for numerical value only
+            row.innerHTML = `
+                <label style="width:120px">${rt.name}</label>
+                <input type="number" min="0" step="0.01" id="ef-h-${rt.id}" 
+                       style="flex: 1; margin-right: 8px;" 
+                       placeholder="Enter quantity/cost">
+                <span style="width: 60px; display: flex; align-items: center; color: var(--text); font-size: 12px;">units</span>
+            `;
+        } else {
+            // For Labour: show the original hours/days dropdown
+            row.innerHTML = `
+                <label style="width:120px">${rt.name}</label>
+                <input type="number" min="0" id="ef-h-${rt.id}" style="margin-right: 4px;">
+                <select id="ef-u-${rt.id}" style="width: 60px;">
+                    <option value="h">h</option>
+                    <option value="d">d</option>
+                </select>
+            `;
+        }
+        
         cont.appendChild(row);
     });
 }
