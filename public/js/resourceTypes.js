@@ -83,12 +83,19 @@ export async function delRT(id) {
  * @param {string} id - The ID of the resource type.
  */
 export async function showResourceTypeAuditTrail(id) {
+    console.log('showResourceTypeAuditTrail called with id:', id);
     try {
+        console.log('Fetching audit trail from:', window.API + `/api/resource-types/${id}/audit`);
         const response = await fetch(window.API + `/api/resource-types/${id}/audit`);
+        console.log('Response status:', response.status, response.ok);
+        
         if (!response.ok) throw new Error('Failed to fetch audit trail');
         const audit = await response.json();
+        console.log('Audit data received:', audit);
         
         const rt = window.rtList.find(x => x.id === id);
+        console.log('Resource type found:', rt);
+        
         const modalContent = document.createElement('div');
         modalContent.innerHTML = `
             <h2>Audit Trail - ${rt.name}</h2>
@@ -132,6 +139,7 @@ export async function showResourceTypeAuditTrail(id) {
         // Remove any existing modal
         const existingModal = document.querySelector('.modal-overlay');
         if (existingModal) {
+            console.log('Removing existing modal');
             existingModal.remove();
         }
         
@@ -143,18 +151,29 @@ export async function showResourceTypeAuditTrail(id) {
                 ${modalContent.innerHTML}
             </div>`;
             
+        console.log('Modal created, adding event listeners');
+        
         // Add close button event listener
-        modal.querySelector('.close').addEventListener('click', () => modal.remove());
+        modal.querySelector('.close').addEventListener('click', () => {
+            console.log('Close button clicked');
+            modal.remove();
+        });
         
         // Add click outside to close
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
+                console.log('Clicked outside modal');
                 modal.remove();
             }
         });
         
         // Append modal to document body
+        console.log('Appending modal to document body');
         document.body.appendChild(modal);
+        
+        // Make the modal visible by setting display to flex
+        modal.style.display = 'flex';
+        console.log('Modal should now be visible');
         
     } catch (error) {
         console.error('Error displaying audit trail:', error);
