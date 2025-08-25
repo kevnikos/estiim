@@ -2,7 +2,7 @@
  * Handles backup-related routes
  */
 import express from 'express';
-import { backupDatabase, listBackups, restoreDatabase } from '../utils.js';
+import { backupDatabase, listBackups, restoreDatabase, deleteBackup } from '../utils.js';
 
 /**
  * Creates a router for backup operations.
@@ -87,6 +87,18 @@ export default function createBackupRouter(db, updateBackupInterval) {
             res.json({ message: 'Database restored successfully' });
         } catch (err) {
             console.error('Error restoring backup:', err);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+
+    // Delete a backup
+    router.delete('/delete/:filename', async (req, res) => {
+        try {
+            const { filename } = req.params;
+            await deleteBackup(filename);
+            res.json({ message: 'Backup deleted successfully' });
+        } catch (err) {
+            console.error('Error deleting backup:', err);
             res.status(500).json({ error: 'Internal server error' });
         }
     });

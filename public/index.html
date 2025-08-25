@@ -645,6 +645,136 @@ footer {
 #init-custom-id {
     width: 120px; /* Smaller User-Defined ID box for 10 chars */
 }
+
+/* Backup grouping styles */
+.backup-year-group {
+    margin-bottom: 24px;
+}
+
+.backup-year-header {
+    color: var(--primary);
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--border);
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    user-select: none;
+    font-size: 20px;
+    font-weight: 700;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.backup-year-header:hover {
+    background-color: var(--hover);
+}
+
+.backup-year-header::before {
+    content: '▼';
+    margin-right: 8px;
+    transition: transform 0.2s ease;
+    font-size: 16px;
+}
+
+.backup-year-header.collapsed::before {
+    transform: rotate(-90deg);
+}
+
+.backup-month-group {
+    margin-left: 16px;
+    margin-bottom: 16px;
+}
+
+.backup-month-header {
+    color: var(--text);
+    margin-bottom: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    user-select: none;
+    font-size: 16px;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.backup-month-header:hover {
+    background-color: var(--hover);
+}
+
+.backup-month-header::before {
+    content: '▼';
+    margin-right: 8px;
+    font-size: 12px;
+    transition: transform 0.2s ease;
+}
+
+.backup-month-header.collapsed::before {
+    transform: rotate(-90deg);
+}
+
+.backup-day-group {
+    margin-left: 16px;
+    margin-bottom: 12px;
+}
+
+.backup-day-header {
+    color: var(--secondary);
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    user-select: none;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.backup-day-header:hover {
+    background-color: var(--hover);
+}
+
+.backup-day-header::before {
+    content: '▼';
+    margin-right: 8px;
+    font-size: 10px;
+    transition: transform 0.2s ease;
+}
+
+.backup-day-header.collapsed::before {
+    transform: rotate(-90deg);
+}
+
+.backup-year-content,
+.backup-month-content,
+.backup-day-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.backup-year-content.collapsed,
+.backup-month-content.collapsed,
+.backup-day-content.collapsed {
+    max-height: 0;
+}
+
+.backup-table {
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+.delete-button {
+    background: var(--red) !important;
+    color: white;
+}
+
+.delete-button:hover {
+    background: #c53030 !important;
+}
 </style>
 </head>
 <body>
@@ -911,21 +1041,9 @@ footer {
         <button id="createBackup">Create Backup Now</button>
       </div>
       <div class="table-container" style="margin-top: 12px;">
-        <table class="backup-table">
-          <thead>
-            <tr>
-              <th>Backup File</th>
-              <th>Created</th>
-              <th>Size</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="backupsList">
-            <tr>
-              <td colspan="4">Loading backups...</td>
-            </tr>
-          </tbody>
-        </table>
+        <div id="backupsList">
+          Loading backups...
+        </div>
       </div>
     </div>
   </div>

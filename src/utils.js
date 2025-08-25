@@ -114,6 +114,26 @@ export async function restoreDatabase(backupFileName) {
 }
 
 /**
+ * Deletes a backup file.
+ * @param {string} backupFileName - The name of the backup file to delete
+ */
+export async function deleteBackup(backupFileName) {
+  const backupPath = path.join(BACKUPS_DIR, backupFileName);
+  try {
+    // Verify the backup file exists
+    await fs.access(backupPath, fs.constants.F_OK);
+    
+    // Delete the backup file
+    await fs.unlink(backupPath);
+    console.log(`INFO: Backup deleted: ${backupFileName}`);
+    return true;
+  } catch (error) {
+    console.error(`ERROR: Failed to delete backup ${backupFileName}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Helper function for deep comparison of hoursPerResourceType objects.
  * @param {object} obj1 - First object to compare.
  * @param {object} obj2 - Second object to compare.
