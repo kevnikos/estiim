@@ -597,7 +597,7 @@ export async function exportInitiatives() {
             "Status", "Classification", "Scope", "Out of Scope",
             "Estimated Hours", "Estimated Days", "Estimated Months", "Shirt Size",
             "Start Date", "End Date",
-            "Selected Factors", "Created At", "Updated At"
+            "Selected Factors", "Manual Resources", "Created At", "Updated At"
         ];
         
         const rows = [headers.join('\t')];
@@ -612,6 +612,46 @@ export async function exportInitiatives() {
                 return `${f.name} (Qty: ${f.quantity}, Hours: ${totalFactorHours * f.quantity})`;
             }).join(', ');
 
+            // Add manual resources summary
+            let manualResourcesSummary = '';
+            if (initiative.manual_resources) {
+                let manualData;
+                try {
+                    // Handle both string and object cases
+                    if (typeof initiative.manual_resources === 'string') {
+                        manualData = JSON.parse(initiative.manual_resources);
+                    } else {
+                        manualData = initiative.manual_resources;
+                    }
+                } catch (e) {
+                    console.warn('Invalid manual_resources JSON for initiative', initiative.id, ':', initiative.manual_resources);
+                    manualData = {}; // Use empty object as fallback
+                }
+                const manualSummaryParts = [];
+                
+                // Add manual hours (Labour resources)
+                if (manualData.manualHours) {
+                    Object.entries(manualData.manualHours).forEach(([rtId, hours]) => {
+                        const rt = window.rtList?.find(r => r.id === rtId);
+                        if (rt && hours > 0) {
+                            manualSummaryParts.push(`${rt.name}: ${hours}h`);
+                        }
+                    });
+                }
+                
+                // Add manual values (Non-Labour resources)
+                if (manualData.manualValues) {
+                    Object.entries(manualData.manualValues).forEach(([rtId, value]) => {
+                        const rt = window.rtList?.find(r => r.id === rtId);
+                        if (rt && value > 0) {
+                            manualSummaryParts.push(`${rt.name}: ${value} units`);
+                        }
+                    });
+                }
+                
+                manualResourcesSummary = manualSummaryParts.join(', ');
+            }
+
             const rowData = [
                 initiative.id, initiative.custom_id, initiative.name, initiative.description,
                 initiative.priority, initiative.priority_num, initiative.status, initiative.classification,
@@ -619,7 +659,7 @@ export async function exportInitiatives() {
                 estimatedMonths, initiative.shirt_size,
                 formatDateInEST(initiative.start_date, false),
                 formatDateInEST(initiative.end_date, false),
-                selectedFactorsSummary,
+                selectedFactorsSummary, manualResourcesSummary,
                 formatDateInEST(initiative.created_at, true),
                 formatDateInEST(initiative.updated_at, true)
             ];
@@ -660,7 +700,8 @@ export async function exportResourceView() {
 
         const headers = [
             "Internal ID", "User-Defined ID", "Name", "Created", "Updated", "Status", "Shirt Size",
-            "Start Date", "End Date", "Resource Type", "Factor", "Factor Hours"
+            "Start Date", "End Date", "Resource Type", "Resource Category", "Resource Cost", 
+            "Factor", "Factor Hours", "Factor Values", "Manual Hours", "Manual Values", "Source"
         ];
         const rows = [headers.join('\t')];
 
@@ -674,30 +715,143 @@ export async function exportResourceView() {
                 formatDateInEST(initiative.end_date, false)
             ];
 
-            let hasFactors = false;
-            if (initiative.selected_factors) {
+            const resourceEntries = [];
+            
+            // Process selected factors (both labour and non-labour)
+            if (initiative.selected_factors && initiative.selected_factors.length > 0) {
                 for (const selectedFactor of initiative.selected_factors) {
                     const factorDetails = efList.find(f => f.id === selectedFactor.factorId);
-                    if (factorDetails && factorDetails.hoursPerResourceType) {
-                        hasFactors = true;
-                        for (const rtId in factorDetails.hoursPerResourceType) {
+                    if (factorDetails) {
+                        // Process labour resources (hoursPerResourceType)
+                        if (factorDetails.hoursPerResourceType) {
+                            for (const [rtId, hours] of Object.entries(factorDetails.hoursPerResourceType)) {
+                                if (hours > 0) {
+                                    const resourceType = rtList.find(rt => rt.id === rtId);
+                                    if (resourceType) {
+                                        const factorHours = hours * selectedFactor.quantity;
+                                        resourceEntries.push({
+                                            resourceType: resourceType.name,
+                                            resourceCategory: resourceType.resource_category || 'Labour',
+                                            resourceCost: resourceType.resource_cost || '',
+                                            factor: factorDetails.name,
+                                            factorHours: factorHours.toFixed(1),
+                                            factorValues: '',
+                                            manualHours: '',
+                                            manualValues: '',
+                                            source: 'Factor (Labour)'
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Process non-labour resources (valuePerResourceType)
+                        if (factorDetails.valuePerResourceType) {
+                            for (const [rtId, value] of Object.entries(factorDetails.valuePerResourceType)) {
+                                if (value > 0) {
+                                    const resourceType = rtList.find(rt => rt.id === rtId);
+                                    if (resourceType) {
+                                        const factorValue = value * selectedFactor.quantity;
+                                        resourceEntries.push({
+                                            resourceType: resourceType.name,
+                                            resourceCategory: resourceType.resource_category || 'Non-Labour',
+                                            resourceCost: resourceType.resource_cost || '',
+                                            factor: factorDetails.name,
+                                            factorHours: '',
+                                            factorValues: factorValue.toFixed(2),
+                                            manualHours: '',
+                                            manualValues: '',
+                                            source: 'Factor (Non-Labour)'
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Process manual resources
+            if (initiative.manual_resources) {
+                let manualData;
+                try {
+                    console.log('Processing manual_resources for initiative', initiative.id, ':', initiative.manual_resources, 'Type:', typeof initiative.manual_resources);
+                    // Handle both string and object cases
+                    if (typeof initiative.manual_resources === 'string') {
+                        manualData = JSON.parse(initiative.manual_resources);
+                    } else {
+                        manualData = initiative.manual_resources;
+                    }
+                } catch (e) {
+                    console.error('Invalid manual_resources JSON for initiative', initiative.id, ':', initiative.manual_resources, 'Error:', e.message);
+                    continue; // Skip this initiative if manual resources data is invalid
+                }
+                
+                // Process manual labour hours
+                if (manualData.manualHours) {
+                    for (const [rtId, hours] of Object.entries(manualData.manualHours)) {
+                        if (hours > 0) {
                             const resourceType = rtList.find(rt => rt.id === rtId);
                             if (resourceType) {
-                                const factorHours = factorDetails.hoursPerResourceType[rtId] * selectedFactor.quantity;
-                                rows.push([
-                                    ...baseRowData,
-                                    resourceType.name,
-                                    factorDetails.name,
-                                    factorHours.toFixed(1)
-                                ].map(item => String(item || '').replace(/\t/g, ' ').replace(/\n/g, ' ')).join('\t'));
+                                resourceEntries.push({
+                                    resourceType: resourceType.name,
+                                    resourceCategory: resourceType.resource_category || 'Labour',
+                                    resourceCost: resourceType.resource_cost || '',
+                                    factor: '',
+                                    factorHours: '',
+                                    factorValues: '',
+                                    manualHours: hours.toFixed(1),
+                                    manualValues: '',
+                                    source: 'Manual (Labour)'
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                // Process manual non-labour values
+                if (manualData.manualValues) {
+                    for (const [rtId, value] of Object.entries(manualData.manualValues)) {
+                        if (value > 0) {
+                            const resourceType = rtList.find(rt => rt.id === rtId);
+                            if (resourceType) {
+                                resourceEntries.push({
+                                    resourceType: resourceType.name,
+                                    resourceCategory: resourceType.resource_category || 'Non-Labour',
+                                    resourceCost: resourceType.resource_cost || '',
+                                    factor: '',
+                                    factorHours: '',
+                                    factorValues: '',
+                                    manualHours: '',
+                                    manualValues: value.toFixed(2),
+                                    source: 'Manual (Non-Labour)'
+                                });
                             }
                         }
                     }
                 }
             }
 
-            if (!hasFactors) {
-                rows.push([...baseRowData, '', '', ''].map(item => String(item || '').replace(/\t/g, ' ').replace(/\n/g, ' ')).join('\t'));
+            // Add rows for each resource entry, or one empty row if no resources
+            if (resourceEntries.length > 0) {
+                for (const entry of resourceEntries) {
+                    rows.push([
+                        ...baseRowData,
+                        entry.resourceType,
+                        entry.resourceCategory,
+                        entry.resourceCost,
+                        entry.factor,
+                        entry.factorHours,
+                        entry.factorValues,
+                        entry.manualHours,
+                        entry.manualValues,
+                        entry.source
+                    ].map(item => String(item || '').replace(/\t/g, ' ').replace(/\n/g, ' ')).join('\t'));
+                }
+            } else {
+                // No resources - add empty row
+                rows.push([...baseRowData, '', '', '', '', '', '', '', '', '']
+                    .map(item => String(item || '').replace(/\t/g, ' ').replace(/\n/g, ' ')).join('\t'));
             }
         }
 
@@ -864,6 +1018,124 @@ function getAuditDiffs(oldData, newData) {
     }
     
     return diffs;
+}
+
+/**
+ * Exports all resource types to a TSV file.
+ */
+export async function exportResourceTypes() {
+    try {
+        await window.loadRT();
+        const { rtList } = window;
+
+        const headers = [
+            "ID", "Name", "Description", "Resource Category", "Resource Cost", 
+            "Created At", "Updated At"
+        ];
+        
+        const rows = [headers.join('\t')];
+
+        for (const rt of rtList) {
+            const rowData = [
+                rt.id,
+                rt.name,
+                rt.description || '',
+                rt.resource_category || '',
+                rt.resource_cost || '',
+                formatDateInEST(rt.created_at, true),
+                formatDateInEST(rt.updated_at, true)
+            ];
+            rows.push(rowData.map(item => String(item || '').replace(/\t/g, ' ').replace(/\n/g, ' ')).join('\t'));
+        }
+
+        const tsvContent = rows.join('\n');
+        const blob = new Blob([tsvContent], { type: 'text/tab-separated-values;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const now = new Date();
+        const filename = `resource_types_export_${now.toISOString().slice(0,10)}.tsv`;
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        window.showMessage('Success', 'Resource types exported successfully!', 'success');
+    } catch (error) {
+        console.error('Export resource types failed:', error);
+        window.showMessage('Error', 'Failed to export resource types: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Exports all estimation factors to a TSV file.
+ */
+export async function exportEstimationFactors() {
+    try {
+        await window.loadEF();
+        await window.loadRT();
+        const { efList, rtList } = window;
+
+        const headers = [
+            "ID", "Name", "Description", "Total Hours", "Labour Resources", "Non-Labour Resources",
+            "Created At", "Updated At"
+        ];
+        
+        const rows = [headers.join('\t')];
+
+        for (const ef of efList) {
+            const totalHours = Object.values(ef.hoursPerResourceType || {}).reduce((sum, h) => sum + h, 0);
+            
+            // Build labour resources summary
+            const labourSummary = Object.entries(ef.hoursPerResourceType || {})
+                .filter(([, hours]) => hours > 0)
+                .map(([rtId, hours]) => {
+                    const rt = rtList.find(r => r.id === rtId);
+                    return rt ? `${rt.name}: ${hours}h` : `${rtId}: ${hours}h`;
+                }).join(', ');
+            
+            // Build non-labour resources summary
+            const nonLabourSummary = Object.entries(ef.valuePerResourceType || {})
+                .filter(([, value]) => value > 0)
+                .map(([rtId, value]) => {
+                    const rt = rtList.find(r => r.id === rtId);
+                    return rt ? `${rt.name}: ${value}` : `${rtId}: ${value}`;
+                }).join(', ');
+
+            const rowData = [
+                ef.id,
+                ef.name,
+                ef.description || '',
+                totalHours,
+                labourSummary,
+                nonLabourSummary,
+                formatDateInEST(ef.created_at, true),
+                formatDateInEST(ef.updated_at, true)
+            ];
+            rows.push(rowData.map(item => String(item || '').replace(/\t/g, ' ').replace(/\n/g, ' ')).join('\t'));
+        }
+
+        const tsvContent = rows.join('\n');
+        const blob = new Blob([tsvContent], { type: 'text/tab-separated-values;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const now = new Date();
+        const filename = `estimation_factors_export_${now.toISOString().slice(0,10)}.tsv`;
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        window.showMessage('Success', 'Estimation factors exported successfully!', 'success');
+    } catch (error) {
+        console.error('Export estimation factors failed:', error);
+        window.showMessage('Error', 'Failed to export estimation factors: ' + error.message, 'error');
+    }
 }
 
 

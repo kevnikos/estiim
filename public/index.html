@@ -769,9 +769,14 @@ footer {
   <div class="card">
     <div class="flex" style="justify-content:space-between;align-items:center;">
         <h2>Resource Types</h2>
-        <!-- New search input for the main resource types page -->
-        <input type="text" id="rt-search-input" class="main-page-search-input" placeholder="Search resource types..." oninput="window.loadRT()">
-        <button onclick="window.openAddResourceTypeModal()">+ Add Resource Type</button>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <!-- New search input for the main resource types page -->
+            <input type="text" id="rt-search-input" class="main-page-search-input" placeholder="Search resource types..." oninput="window.loadRT()">
+            <button class="export-button" onclick="window.exportResourceTypes()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> Export
+            </button>
+            <button onclick="window.openAddResourceTypeModal()">+ Add Resource Type</button>
+        </div>
     </div>
     <div id="rt-table-container" class="card">
         <table id="rt-table"><thead><tr><th>Name</th><th>Description</th><th>Resource Type</th><th>Resource Cost</th><th></th></tr></thead><tbody></tbody></table>
@@ -781,9 +786,14 @@ footer {
   <div class="card" style="margin-top: 24px;">
     <div class="flex" style="justify-content:space-between;align-items:center; margin-bottom: 12px;">
         <h2>Pre-Built Factors</h2>
-        <!-- Existing search input for the main factors page -->
-        <input type="text" id="ef-search-input" class="main-page-search-input" placeholder="Search factors..." oninput="window.loadEF()">
-        <button onclick="window.addEstimationFactor()">+ Add Pre-Built</button>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <!-- Existing search input for the main factors page -->
+            <input type="text" id="ef-search-input" class="main-page-search-input" placeholder="Search factors..." oninput="window.loadEF()">
+            <button class="export-button" onclick="window.exportEstimationFactors()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> Export
+            </button>
+            <button onclick="window.addEstimationFactor()">+ Add Pre-Built</button>
+        </div>
     </div>
     <!-- Existing container for scrollable estimation factors table -->
     <div id="ef-table-container" class="card">
