@@ -193,7 +193,12 @@ export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'de
   allInitiatives.sort((a, b) => {
     let valA = a[sortBy];
     let valB = b[sortBy];
-    if (sortBy === 'id' || sortBy === 'computed_hours' || sortBy === 'priority_num') {
+    
+    if (sortBy === 'total_cost') {
+        // Special handling for total_cost - calculate the values for comparison
+        valA = calculateInitiativeTotalCost(a);
+        valB = calculateInitiativeTotalCost(b);
+    } else if (sortBy === 'id' || sortBy === 'computed_hours' || sortBy === 'priority_num') {
         valA = parseFloat(valA || 0);
         valB = parseFloat(valB || 0);
     } else if (sortBy.includes('_date') || sortBy.includes('_at')) {
