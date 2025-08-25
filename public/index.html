@@ -335,6 +335,21 @@ footer {
     border: none; /* Hide border when collapsed */
 }
 
+/* Manual resource item styling */
+.manual-resource-item {
+    background-color: #f8f9fb; /* Slightly different background */
+    border-left: 4px solid var(--primary); /* Blue left border to distinguish */
+}
+
+.manual-resource-item .factor-name {
+    color: #333; /* Slightly different text color */
+}
+
+.manual-resource-item .factor-resources {
+    color: #777; /* Muted description color */
+    font-style: italic; /* Italic to show it's manual */
+}
+
 /* Table header sortable styles */
 .sortable-th {
     cursor: pointer;
@@ -1067,17 +1082,11 @@ footer {
       </div>
     </div>
 
-    <!-- New search input -->
-    <input type="text" id="factor-search-input" placeholder="Search factors..." oninput="window.loadFactorPicker(this.value)">
+    <!-- Unified search input -->
+    <input type="text" id="factor-search-input" placeholder="Search factors and resources..." oninput="window.loadFactorPicker(this.value)">
     
-    <!-- Manual resource input section -->
-    <div style="margin: 16px 0; padding: 16px; border: 1px solid var(--border); border-radius: 4px; background-color: var(--bg-light);">
-        <h4 style="margin: 0 0 12px 0;">Add Resources Directly</h4>
-        <div id="manual-resources-grid"></div>
-        <button onclick="window.updateManualFactorCalculations()" style="margin-top: 8px; background: var(--primary);">Update Calculations</button>
-    </div>
-    
-    <div id="factor-picker-container"> <!-- New container for scrollbar -->
+    <!-- Unified factor and resource picker container -->
+    <div id="factor-picker-container"> <!-- Container for scrollbar -->
         <div id="factor-picker"></div>
     </div>
     <div style="text-align:right;margin-top:16px"><button onclick="window.saveFactors()">Save</button><button onclick="window.closeModal('factors')" style="background:var(--border);color:var(--text)">Cancel</button></div>

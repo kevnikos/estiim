@@ -27,15 +27,13 @@ export async function openFactorModal() {
     await window.loadShirtSizes();
     document.getElementById('factor-search-input').value = '';
     loadFactorPicker();
-    renderManualResourcesGrid();
-    populateManualResourcesFromData();
     updateDateCalculations();
     window.openModal('factors');
 }
 
 /**
- * Loads and renders the list of available factors in the modal.
- * @param {string} [searchQuery=''] - A query to filter the factors.
+ * Loads and renders the unified list of factors and manual resources in the modal.
+ * @param {string} [searchQuery=''] - A query to filter the items.
  */
 export function loadFactorPicker(searchQuery = '') {
   const area = document.getElementById('factor-picker');
@@ -43,38 +41,93 @@ export function loadFactorPicker(searchQuery = '') {
   
   const lowerCaseSearchQuery = searchQuery.toLowerCase();
   
+  // Prepare pre-built factors with checked status
   const factorsWithCheckedStatus = window.efList.map(f => ({
       ...f,
-      isChecked: window.selectedFactors.some(sf => sf.factorId === f.id)
+      isChecked: window.selectedFactors.some(sf => sf.factorId === f.id),
+      type: 'factor'
   }));
 
-  const filteredAndSortedEfList = factorsWithCheckedStatus
-    .filter(f => {
-      const factorName = f.name.toLowerCase();
-      const factorDescription = (f.description || '').toLowerCase();
-      const labourResourceNames = Object.entries(f.hoursPerResourceType || {})
-        .map(([id]) => (window.rtList.find(x => x.id === id)?.name || '').toLowerCase())
-        .join(' ');
-      const nonLabourResourceNames = Object.entries(f.valuePerResourceType || {})
-        .map(([id]) => (window.rtList.find(x => x.id === id)?.name || '').toLowerCase())
-        .join(' ');
-      const allResourceNames = labourResourceNames + ' ' + nonLabourResourceNames;
-      return factorName.includes(lowerCaseSearchQuery) || factorDescription.includes(lowerCaseSearchQuery) || allResourceNames.includes(lowerCaseSearchQuery);
-    })
-    .sort((a, b) => {
-        if (a.isChecked && !b.isChecked) return -1;
-        if (!a.isChecked && b.isChecked) return 1;
-        return a.name.localeCompare(b.name);
-    });
+  // Prepare manual resources as items
+  const manualResourceItems = (window.rtList || []).map(rt => ({
+      id: `manual-${rt.id}`,
+      name: rt.name,
+      description: rt.resource_category === 'Labour' ? 'Manual resource (hours)' : 'Manual resource (units)',
+      resource_category: rt.resource_category,
+      resource_type_id: rt.id,
+      isChecked: false, // Manual resources don't have a "checked" state in the same way
+      type: 'manual'
+  }));
 
-  filteredAndSortedEfList.forEach(f => {
+  // Combine and filter all items
+  const allItems = [...factorsWithCheckedStatus, ...manualResourceItems];
+  
+  const filteredItems = allItems.filter(item => {
+      const itemName = item.name.toLowerCase();
+      const itemDescription = (item.description || '').toLowerCase();
+      
+      if (item.type === 'factor') {
+          const labourResourceNames = Object.entries(item.hoursPerResourceType || {})
+            .map(([id]) => (window.rtList.find(x => x.id === id)?.name || '').toLowerCase())
+            .join(' ');
+          const nonLabourResourceNames = Object.entries(item.valuePerResourceType || {})
+            .map(([id]) => (window.rtList.find(x => x.id === id)?.name || '').toLowerCase())
+            .join(' ');
+          const allResourceNames = labourResourceNames + ' ' + nonLabourResourceNames;
+          return itemName.includes(lowerCaseSearchQuery) || 
+                 itemDescription.includes(lowerCaseSearchQuery) || 
+                 allResourceNames.includes(lowerCaseSearchQuery);
+      } else {
+          // For manual resources, search name and category
+          return itemName.includes(lowerCaseSearchQuery) || 
+                 itemDescription.includes(lowerCaseSearchQuery) ||
+                 item.resource_category.toLowerCase().includes(lowerCaseSearchQuery);
+      }
+  });
+
+  // Sort: checked factors first, then unchecked factors, then manual resources, all alphabetically within groups
+  const sortedItems = filteredItems.sort((a, b) => {
+      if (a.type === 'factor' && b.type === 'factor') {
+          if (a.isChecked && !b.isChecked) return -1;
+          if (!a.isChecked && b.isChecked) return 1;
+          return a.name.localeCompare(b.name);
+      } else if (a.type === 'factor' && b.type === 'manual') {
+          return -1; // Factors before manual resources
+      } else if (a.type === 'manual' && b.type === 'factor') {
+          return 1; // Manual resources after factors
+      } else {
+          return a.name.localeCompare(b.name); // Both manual, sort alphabetically
+      }
+  });
+
+  // Render each item
+  sortedItems.forEach(item => {
+    if (item.type === 'factor') {
+        renderFactorItem(item, area);
+    } else {
+        renderManualResourceItem(item, area);
+    }
+  });
+  
+  updateFactorCalculations();
+  
+  // Update quantity displays for factors
+  factorsWithCheckedStatus.forEach(f => {
+      toggleQtyDisplay(f.id);
+  });
+}
+
+/**
+ * Renders a pre-built factor item in the picker.
+ */
+function renderFactorItem(factor, container) {
     const row = document.createElement('div');
     row.className = 'factor-item';
-    const checked = f.isChecked ? 'checked' : '';
-    const qty = window.selectedFactors.find(sf => sf.factorId === f.id)?.quantity || '1';
-    const qtyDisplay = f.isChecked ? 'inline-block' : 'none';
-    const hrs = f.hoursPerResourceType || {};
-    const vals = f.valuePerResourceType || {};
+    const checked = factor.isChecked ? 'checked' : '';
+    const qty = window.selectedFactors.find(sf => sf.factorId === factor.id)?.quantity || '1';
+    const qtyDisplay = factor.isChecked ? 'inline-block' : 'none';
+    const hrs = factor.hoursPerResourceType || {};
+    const vals = factor.valuePerResourceType || {};
     
     const labourParts = Object.entries(hrs)
         .filter(([, v]) => v > 0)
@@ -95,20 +148,85 @@ export function loadFactorPicker(searchQuery = '') {
 
     row.innerHTML = `
         <label class="custom-checkbox">
-            <input type="checkbox" data-id="${f.id}" onchange="window.toggleQty('${f.id}');" ${checked}>
+            <input type="checkbox" data-id="${factor.id}" onchange="window.toggleQty('${factor.id}');" ${checked}>
             <span class="checkmark"></span>
         </label>
         <div class="factor-item-content">
-            <div class="factor-name">${f.name}</div>
+            <div class="factor-name"><strong>[pre-built]</strong> ${factor.name}</div>
             <div class="factor-resources">${resourceDetails}</div>
         </div>
-        <input type="number" id="qty-${f.id}" value="${qty}" min="1" oninput="window.updateFactorCalculations()" style="display:${qtyDisplay}">`;
-    area.appendChild(row);
-  });
-  updateFactorCalculations();
-  filteredAndSortedEfList.forEach(f => {
-      toggleQtyDisplay(f.id);
-  });
+        <input type="number" id="qty-${factor.id}" value="${qty}" min="1" oninput="window.updateFactorCalculations()" style="display:${qtyDisplay}">`;
+    container.appendChild(row);
+}
+
+/**
+ * Renders a manual resource item in the picker.
+ */
+function renderManualResourceItem(resource, container) {
+    const row = document.createElement('div');
+    row.className = 'factor-item manual-resource-item';
+    
+    const isNonLabour = resource.resource_category === 'Non-Labour';
+    const rtId = resource.resource_type_id;
+    
+    // Get current value from window.manualResources if it exists
+    const currentManualHours = (window.manualResources?.manualHours || {})[rtId] || 0;
+    const currentManualValues = (window.manualResources?.manualValues || {})[rtId] || 0;
+    let displayValue = '';
+    let displayUnit = 'h';
+    
+    if (isNonLabour) {
+        displayValue = currentManualValues || '';
+    } else {
+        if (currentManualHours > 0) {
+            if (currentManualHours % 8 === 0) {
+                displayValue = currentManualHours / 8;
+                displayUnit = 'd';
+            } else {
+                displayValue = currentManualHours;
+                displayUnit = 'h';
+            }
+        }
+    }
+    
+    if (isNonLabour) {
+        // For Non-Labour: show a numerical input for values
+        row.innerHTML = `
+            <div style="display: flex; align-items: center; width: 100%; gap: 8px;">
+                <div class="factor-item-content" style="flex: 1;">
+                    <div class="factor-name">${resource.name}</div>
+                    <div class="factor-resources">(Manual ${resource.resource_category} Resource)</div>
+                </div>
+                <input type="number" min="0" step="0.01" id="manual-${rtId}" 
+                       value="${displayValue}"
+                       style="width: 80px;" 
+                       placeholder="0"
+                       oninput="window.updateFactorCalculations()">
+                <span style="font-size: 0.9em; color: #666; width: 40px;">units</span>
+            </div>
+        `;
+    } else {
+        // For Labour: show hours/days input with dropdown
+        row.innerHTML = `
+            <div style="display: flex; align-items: center; width: 100%; gap: 8px;">
+                <div class="factor-item-content" style="flex: 1;">
+                    <div class="factor-name">${resource.name}</div>
+                    <div class="factor-resources">(Manual ${resource.resource_category} Resource)</div>
+                </div>
+                <input type="number" min="0" id="manual-${rtId}" 
+                       value="${displayValue}"
+                       style="width: 60px;" 
+                       placeholder="0"
+                       oninput="window.updateFactorCalculations()">
+                <select id="manual-unit-${rtId}" style="width: 50px;" onchange="window.updateFactorCalculations()">
+                    <option value="h" ${displayUnit === 'h' ? 'selected' : ''}>h</option>
+                    <option value="d" ${displayUnit === 'd' ? 'selected' : ''}>d</option>
+                </select>
+            </div>
+        `;
+    }
+    
+    container.appendChild(row);
 }
 
 /**
@@ -291,57 +409,6 @@ function calculateBusinessDays(startDate, endDate) {
 }
 
 /**
- * Renders the manual resources grid for direct input.
- */
-export function renderManualResourcesGrid() {
-    const container = document.getElementById('manual-resources-grid');
-    if (!container || !window.rtList) return;
-    
-    container.innerHTML = '';
-    
-    window.rtList.forEach(rt => {
-        const row = document.createElement('div');
-        row.style.cssText = 'display: flex; align-items: center; margin-bottom: 8px; gap: 8px;';
-        
-        const isNonLabour = rt.resource_category === 'Non-Labour';
-        
-        if (isNonLabour) {
-            // For Non-Labour: show a numerical input for values
-            row.innerHTML = `
-                <label style="width: 120px; font-size: 0.9em;">${rt.name}:</label>
-                <input type="number" min="0" step="0.01" id="manual-${rt.id}" 
-                       style="flex: 1; max-width: 100px;" 
-                       placeholder="0"
-                       oninput="window.updateManualFactorCalculations()">
-                <span style="font-size: 0.8em; color: #666;">units</span>
-            `;
-        } else {
-            // For Labour: show hours/days input with dropdown
-            row.innerHTML = `
-                <label style="width: 120px; font-size: 0.9em;">${rt.name}:</label>
-                <input type="number" min="0" id="manual-${rt.id}" 
-                       style="width: 60px;" 
-                       placeholder="0"
-                       oninput="window.updateManualFactorCalculations()">
-                <select id="manual-unit-${rt.id}" style="width: 50px;" onchange="window.updateManualFactorCalculations()">
-                    <option value="h">h</option>
-                    <option value="d">d</option>
-                </select>
-            `;
-        }
-        
-        container.appendChild(row);
-    });
-}
-
-/**
- * Updates the factor calculations including manual resources.
- */
-export function updateManualFactorCalculations() {
-    updateFactorCalculations();
-}
-
-/**
  * Gets the manual resource hours/values as objects.
  */
 export function getManualResources() {
@@ -376,46 +443,3 @@ export function getManualResources() {
     return { manualHours, manualValues };
 }
 
-/**
- * Populates the manual resources grid with existing data.
- */
-export function populateManualResourcesFromData() {
-    if (!window.rtList) return;
-    
-    // Ensure window.manualResources has the correct structure
-    if (!window.manualResources) {
-        window.manualResources = { manualHours: {}, manualValues: {} };
-    }
-    
-    const manualHours = window.manualResources.manualHours || {};
-    const manualValues = window.manualResources.manualValues || {};
-    
-    window.rtList.forEach(rt => {
-        const input = document.getElementById(`manual-${rt.id}`);
-        const unitSelect = document.getElementById(`manual-unit-${rt.id}`);
-        
-        if (rt.resource_category === 'Non-Labour') {
-            // For Non-Labour: set the value directly
-            if (input && manualValues[rt.id]) {
-                input.value = manualValues[rt.id];
-            }
-        } else {
-            // For Labour: set hours/days value and unit
-            if (input && manualHours[rt.id]) {
-                const hours = manualHours[rt.id];
-                if (hours % 8 === 0 && unitSelect) {
-                    // Display as days if divisible by 8
-                    input.value = hours / 8;
-                    unitSelect.value = 'd';
-                } else {
-                    // Display as hours
-                    input.value = hours;
-                    if (unitSelect) unitSelect.value = 'h';
-                }
-            }
-        }
-    });
-    
-    // Update calculations after populating
-    updateFactorCalculations();
-}
