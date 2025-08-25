@@ -267,8 +267,15 @@ export async function initCategoryManagement() {
         return;
     }
     
+    // Find the General Preferences card to insert before it
+    const generalPrefsCard = document.getElementById('prefs-card');
+    if (!generalPrefsCard) {
+        console.error('General preferences card not found');
+        return;
+    }
+    
     const categoriesSection = document.createElement('div');
-    categoriesSection.className = 'pref-section';
+    categoriesSection.className = 'card';
     categoriesSection.innerHTML = `
         <h3>Categories</h3>
         <div class="pref-content">
@@ -280,7 +287,8 @@ export async function initCategoryManagement() {
         </div>
     `;
     
-    prefsContent.appendChild(categoriesSection);
+    // Insert the categories section before the general preferences card
+    prefsContent.insertBefore(categoriesSection, generalPrefsCard);
     
     // Recalculate counts before showing the list
     try {
