@@ -27,6 +27,8 @@ export async function openFactorModal() {
     await window.loadShirtSizes();
     document.getElementById('factor-search-input').value = '';
     loadFactorPicker();
+    renderManualResourcesGrid();
+    populateManualResourcesFromData();
     updateDateCalculations();
     window.openModal('factors');
 }
@@ -164,12 +166,24 @@ export function toggleQty(id) {
  * Saves the selected factors back to the main initiative form.
  */
 export function saveFactors() {
+    // Save manual resources to global variable
+    window.manualResources = getManualResources();
+    
     renderSelectedFactorsSummary();
     let totalHoursForDisplay = 0;
+    
+    // Add hours from selected factors
     window.selectedFactors.forEach(f => {
         const totalFactorHours = Object.values(f.hoursPerResourceType || {}).reduce((sum, h) => sum + h, 0);
         totalHoursForDisplay += totalFactorHours * (f.quantity || 1);
     });
+    
+    // Add hours from manual resources
+    const { manualHours } = window.manualResources;
+    Object.values(manualHours).forEach(hours => {
+        totalHoursForDisplay += hours;
+    });
+    
     const shirtSizeForDisplay = getShirtSizeFromHours(totalHoursForDisplay);
     document.getElementById('init-calculated-shirt-size').textContent = `Calculated T-Shirt Size: ${shirtSizeForDisplay} (${totalHoursForDisplay}h)`;
     window.closeModal('factors');
@@ -180,6 +194,8 @@ export function saveFactors() {
  */
 export function updateFactorCalculations() {
     let totalHours = 0;
+    
+    // Add hours from selected factors
     window.selectedFactors.forEach(sf => {
         const factor = window.efList.find(f => f.id === sf.factorId);
         if (factor) {
@@ -189,6 +205,16 @@ export function updateFactorCalculations() {
             totalHours += totalFactorHours * sf.quantity;
         }
     });
+    
+    // Add hours from manual resources (with error handling)
+    try {
+        const { manualHours } = getManualResources();
+        Object.values(manualHours).forEach(hours => {
+            totalHours += hours;
+        });
+    } catch (error) {
+        console.error('Error calculating manual resources:', error);
+    }
 
     const hoursPerDay = 8;
     const hoursPerMonth = 160;
@@ -262,4 +288,134 @@ function calculateBusinessDays(startDate, endDate) {
         currentDate.setDate(currentDate.getDate() + 1);
     }
     return count;
+}
+
+/**
+ * Renders the manual resources grid for direct input.
+ */
+export function renderManualResourcesGrid() {
+    const container = document.getElementById('manual-resources-grid');
+    if (!container || !window.rtList) return;
+    
+    container.innerHTML = '';
+    
+    window.rtList.forEach(rt => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display: flex; align-items: center; margin-bottom: 8px; gap: 8px;';
+        
+        const isNonLabour = rt.resource_category === 'Non-Labour';
+        
+        if (isNonLabour) {
+            // For Non-Labour: show a numerical input for values
+            row.innerHTML = `
+                <label style="width: 120px; font-size: 0.9em;">${rt.name}:</label>
+                <input type="number" min="0" step="0.01" id="manual-${rt.id}" 
+                       style="flex: 1; max-width: 100px;" 
+                       placeholder="0"
+                       oninput="window.updateManualFactorCalculations()">
+                <span style="font-size: 0.8em; color: #666;">units</span>
+            `;
+        } else {
+            // For Labour: show hours/days input with dropdown
+            row.innerHTML = `
+                <label style="width: 120px; font-size: 0.9em;">${rt.name}:</label>
+                <input type="number" min="0" id="manual-${rt.id}" 
+                       style="width: 60px;" 
+                       placeholder="0"
+                       oninput="window.updateManualFactorCalculations()">
+                <select id="manual-unit-${rt.id}" style="width: 50px;" onchange="window.updateManualFactorCalculations()">
+                    <option value="h">h</option>
+                    <option value="d">d</option>
+                </select>
+            `;
+        }
+        
+        container.appendChild(row);
+    });
+}
+
+/**
+ * Updates the factor calculations including manual resources.
+ */
+export function updateManualFactorCalculations() {
+    updateFactorCalculations();
+}
+
+/**
+ * Gets the manual resource hours/values as objects.
+ */
+export function getManualResources() {
+    const manualHours = {};
+    const manualValues = {};
+    
+    if (!window.rtList) return { manualHours, manualValues };
+    
+    try {
+        window.rtList.forEach(rt => {
+            const input = document.getElementById(`manual-${rt.id}`);
+            const unitSelect = document.getElementById(`manual-unit-${rt.id}`);
+            
+            if (input && input.value && +input.value > 0) {
+                let val = +input.value;
+                
+                if (rt.resource_category === 'Non-Labour') {
+                    manualValues[rt.id] = val;
+                } else {
+                    // For Labour: convert days to hours if needed
+                    if (unitSelect && unitSelect.value === 'd') {
+                        val *= 8;
+                    }
+                    manualHours[rt.id] = val;
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error getting manual resources:', error);
+    }
+    
+    return { manualHours, manualValues };
+}
+
+/**
+ * Populates the manual resources grid with existing data.
+ */
+export function populateManualResourcesFromData() {
+    if (!window.rtList) return;
+    
+    // Ensure window.manualResources has the correct structure
+    if (!window.manualResources) {
+        window.manualResources = { manualHours: {}, manualValues: {} };
+    }
+    
+    const manualHours = window.manualResources.manualHours || {};
+    const manualValues = window.manualResources.manualValues || {};
+    
+    window.rtList.forEach(rt => {
+        const input = document.getElementById(`manual-${rt.id}`);
+        const unitSelect = document.getElementById(`manual-unit-${rt.id}`);
+        
+        if (rt.resource_category === 'Non-Labour') {
+            // For Non-Labour: set the value directly
+            if (input && manualValues[rt.id]) {
+                input.value = manualValues[rt.id];
+            }
+        } else {
+            // For Labour: set hours/days value and unit
+            if (input && manualHours[rt.id]) {
+                const hours = manualHours[rt.id];
+                if (hours % 8 === 0 && unitSelect) {
+                    // Display as days if divisible by 8
+                    input.value = hours / 8;
+                    unitSelect.value = 'd';
+                } else {
+                    // Display as hours
+                    input.value = hours;
+                    if (unitSelect) unitSelect.value = 'h';
+                }
+            }
+        }
+    });
+    
+    // Update calculations after populating
+    updateFactorCalculations();
 }

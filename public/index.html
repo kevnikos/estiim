@@ -1069,6 +1069,14 @@ footer {
 
     <!-- New search input -->
     <input type="text" id="factor-search-input" placeholder="Search factors..." oninput="window.loadFactorPicker(this.value)">
+    
+    <!-- Manual resource input section -->
+    <div style="margin: 16px 0; padding: 16px; border: 1px solid var(--border); border-radius: 4px; background-color: var(--bg-light);">
+        <h4 style="margin: 0 0 12px 0;">Add Resources Directly</h4>
+        <div id="manual-resources-grid"></div>
+        <button onclick="window.updateManualFactorCalculations()" style="margin-top: 8px; background: var(--primary);">Update Calculations</button>
+    </div>
+    
     <div id="factor-picker-container"> <!-- New container for scrollbar -->
         <div id="factor-picker"></div>
     </div>

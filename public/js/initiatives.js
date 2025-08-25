@@ -195,6 +195,7 @@ export function addInitiative() {
     document.getElementById('init-updated').textContent = '';
     document.getElementById('init-calculated-shirt-size').textContent = '';
     window.selectedFactors = [];
+    window.manualResources = { manualHours: {}, manualValues: {} };
     window.selectedCategories = [];
     window.currentInitiativeJournal = [];
     window.initCategoriesUI();
@@ -234,6 +235,7 @@ export function editInitiative(id) {
     document.getElementById('init-calculated-shirt-size').textContent = `Calculated T-Shirt Size: ${init.shirt_size || 'N/A'} (${init.computed_hours || 0}h)`;
     
     window.selectedFactors = init.selected_factors || []; 
+    window.manualResources = init.manual_resources || { manualHours: {}, manualValues: {} };
     window.currentInitiativeJournal = init.journal_entries || []; 
     window.renderSelectedFactorsSummary();
     renderJournalLog();
@@ -318,6 +320,7 @@ export async function saveInitiative() {
         scope: document.getElementById('init-scope').value.trim(),
         out_of_scope: document.getElementById('init-out').value.trim(),
         selected_factors: window.selectedFactors,
+        manual_resources: window.manualResources || { manualHours: {}, manualValues: {} },
         start_date: document.getElementById('init-start-date').value.trim() || null,
         end_date: document.getElementById('init-end-date').value.trim() || null,
         estimated_duration: parseInt(document.getElementById('init-estimated-duration').value, 10) || null,

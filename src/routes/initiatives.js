@@ -24,6 +24,7 @@ export default function createInitiativesRouter(db) {
   const parseInitiativeRow = (row) => {
     if (!row) return null;
     row.selected_factors = JSON.parse(row.selected_factors || '[]');
+    row.manual_resources = JSON.parse(row.manual_resources || '{}');
     row.journal_entries = JSON.parse(row.journal_entries || '[]');
     row.journal_entries.forEach(entry => {
       if (entry.type === 'audit') {
@@ -154,7 +155,7 @@ export default function createInitiativesRouter(db) {
       const now = new Date().toISOString();
       const {
         name, custom_id, description, priority, priority_num, status, estimation_type,
-        classification, scope, out_of_scope, selected_factors, journal_entries,
+        classification, scope, out_of_scope, selected_factors, manual_resources, journal_entries,
         start_date, end_date, estimated_duration
       } = req.body;
 
@@ -167,6 +168,13 @@ export default function createInitiativesRouter(db) {
           }
         }
       }
+      
+      // Add manual resource hours to computed hours
+      if (manual_resources && manual_resources.manualHours) {
+        const manualHoursTotal = Object.values(manual_resources.manualHours).reduce((sum, h) => sum + h, 0);
+        computedHours += manualHoursTotal;
+      }
+      
       computedHours = parseFloat(computedHours.toFixed(1));
       const shirtSize = await getShirtSize(db, computedHours);
 
@@ -190,12 +198,13 @@ export default function createInitiativesRouter(db) {
       newJournalEntries.push(auditEntry);
 
       const result = await db.run(
-        `INSERT INTO initiatives (name, custom_id, description, priority, priority_num, status, estimation_type, classification, scope, out_of_scope, selected_factors, computed_hours, shirt_size, journal_entries, start_date, end_date, estimated_duration, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO initiatives (name, custom_id, description, priority, priority_num, status, estimation_type, classification, scope, out_of_scope, selected_factors, manual_resources, computed_hours, shirt_size, journal_entries, start_date, end_date, estimated_duration, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           name, custom_id, description, priority, priority_num, status, estimation_type,
           classification, scope, out_of_scope,
           JSON.stringify(selected_factors || []),
+          JSON.stringify(manual_resources || {}),
           computedHours, shirtSize, JSON.stringify(newJournalEntries),
           start_date, end_date, estimated_duration, now, now
         ]
@@ -218,7 +227,7 @@ export default function createInitiativesRouter(db) {
         const now = new Date().toISOString();
         const {
             name, custom_id, description, priority, priority_num, status, estimation_type,
-            classification, scope, out_of_scope, selected_factors, journal_entries,
+            classification, scope, out_of_scope, selected_factors, manual_resources, journal_entries,
             start_date, end_date, estimated_duration, categories
         } = req.body;
 
@@ -236,6 +245,13 @@ export default function createInitiativesRouter(db) {
                 }
             }
         }
+        
+        // Add manual resource hours to computed hours
+        if (manual_resources && manual_resources.manualHours) {
+            const manualHoursTotal = Object.values(manual_resources.manualHours).reduce((sum, h) => sum + h, 0);
+            newComputedHours += manualHoursTotal;
+        }
+        
         newComputedHours = parseFloat(newComputedHours.toFixed(1));
         const newShirtSize = await getShirtSize(db, newComputedHours);
 
@@ -267,6 +283,7 @@ export default function createInitiativesRouter(db) {
             name, custom_id, description, priority, priority_num, status, estimation_type,
             classification, scope, out_of_scope,
             selected_factors: JSON.stringify(selected_factors || []),
+            manual_resources: JSON.stringify(manual_resources || {}),
             journal_entries: JSON.stringify(journal_entries || []),
             computed_hours: newComputedHours,
             shirt_size: newShirtSize,
