@@ -17,6 +17,13 @@ export async function loadRT() {
         .filter(r => r.name.toLowerCase().includes(searchQuery) || (r.description && r.description.toLowerCase().includes(searchQuery)))
         .sort((a, b) => a.name.localeCompare(b.name));
 
+    // Update count display
+    const countEl = document.getElementById('rt-count');
+    if (countEl) {
+        countEl.textContent = `${filteredResourceTypes.length} items shown.`;
+        countEl.title = `${filteredResourceTypes.length} resource type${filteredResourceTypes.length===1?'':'s'} shown`;
+    }
+
     const tbody = document.querySelector('#rt-table tbody');
     tbody.innerHTML = '';
     const itemsToDisplay = filteredResourceTypes;

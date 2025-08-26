@@ -63,6 +63,13 @@ export async function loadEF() {
   tbody.innerHTML = '';
   const itemsToDisplay = filteredFactors;
 
+    // Update count display
+    const efCountEl = document.getElementById('ef-count');
+        if (efCountEl) {
+            efCountEl.textContent = `${itemsToDisplay.length} items shown.`;
+            efCountEl.title = `${itemsToDisplay.length} pre-built factor${itemsToDisplay.length===1?'':'s'} shown`;
+        }
+
   itemsToDisplay.forEach(f => {
     const hrs = f.hoursPerResourceType || {};
     const vals = f.valuePerResourceType || {};
