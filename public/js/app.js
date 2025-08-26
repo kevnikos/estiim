@@ -140,7 +140,14 @@ window.show = function(hash) {
     }, 100);
   }
   if (id === 'backups') {
-    window.refreshBackupList();
+    if (window.refreshBackupList) {
+      window.refreshBackupList();
+    }
+    // Extra defensive close in case earlier logic didn't run due to timing
+    const flyoutMenu2 = document.getElementById('flyout-menu');
+    if (flyoutMenu2 && flyoutMenu2.classList.contains('active')) {
+      flyoutMenu2.classList.remove('active');
+    }
   }
   // About page is static content, no initialization needed
   
