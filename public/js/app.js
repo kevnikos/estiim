@@ -50,6 +50,46 @@ Object.assign(window, preferences);
 Object.assign(window, dropdownOptions);
 Object.assign(window, categories);
 
+// --- Dynamic Layout ---
+// Function to dynamically resize the initiatives table to fill available space
+window.resizeInitiativesTable = function() {
+  const container = document.getElementById('init-table-container');
+  if (!container) return;
+  
+  // Only resize when on home section
+  const homeSection = document.getElementById('home');
+  if (!homeSection || !homeSection.classList.contains('active')) return;
+  
+  // Calculate available height
+  const viewportHeight = window.innerHeight;
+  const headerHeight = document.getElementById('main-header')?.offsetHeight || 0;
+  const sectionPadding = 48; // 24px top + 24px bottom
+  
+  // Get the height of elements above the table
+  const controlsCard = homeSection.querySelector('.card:first-child');
+  const controlsHeight = controlsCard?.offsetHeight || 0;
+  const controlsMargin = 24; // margin-bottom on card
+  
+  // Calculate table container height
+  const tableCardPadding = 40; // 20px padding on each side of card
+  const tableContainerPadding = 20; // 10px padding on each side of container
+  const minHeight = 200;
+  
+  const availableHeight = viewportHeight - headerHeight - sectionPadding - controlsHeight - controlsMargin - tableCardPadding - tableContainerPadding;
+  const finalHeight = Math.max(minHeight, availableHeight);
+  
+  container.style.height = finalHeight + 'px';
+};
+
+// Debounced resize function
+let resizeTimeout;
+window.debouncedResize = function() {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    window.resizeInitiativesTable();
+  }, 100);
+};
+
 // --- Navigation ---
 // The main navigation function for showing/hiding sections.
 window.show = function(hash) {
@@ -79,6 +119,10 @@ window.show = function(hash) {
     window.populatePrefsPage(); // Ensure preferences are loaded into the UI before loading initiatives
     window.initStatusFilter(); // Initialize/restore the status filter
     window.loadInitiatives(window.currentSortColumn, window.currentSortDirection);
+    // Resize the table after a short delay to ensure DOM is ready
+    setTimeout(() => {
+      window.resizeInitiativesTable();
+    }, 100);
   }
   if (id === 'factors') {
     window.loadRT().then(window.loadEF);
@@ -141,6 +185,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     // 5. Set up routing based on the URL hash.
     window.addEventListener('hashchange', () => window.show(location.hash));
+    
+    // 6. Set up window resize listener for dynamic table sizing
+    window.addEventListener('resize', window.debouncedResize);
+    
     // Also handle initial page load
     if(location.hash) {
         window.show(location.hash);
