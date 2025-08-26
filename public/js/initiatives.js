@@ -1274,3 +1274,88 @@ function updateSortIndicators(sortBy, sortDirection) {
         }
     });
 }
+
+// Build enhanced status filter UI after dropdown options loaded
+export function initEnhancedStatusFilterUI() {
+    const hiddenSelect = document.getElementById('init-status-filter');
+    const control = document.getElementById('status-filter-control');
+    const panel = document.getElementById('status-filter-panel');
+    const optionsHost = document.getElementById('status-filter-options');
+    const summary = document.getElementById('status-filter-summary');
+    const searchInput = document.getElementById('status-filter-search');
+        const btnAll = document.getElementById('status-filter-btn-all');
+        const btnClear = document.getElementById('status-filter-btn-clear');
+    if (!hiddenSelect || !control || !panel || !optionsHost) return;
+
+    function closePanel(){ panel.classList.add('hidden'); control.setAttribute('aria-expanded','false'); }
+    function openPanel(){ panel.classList.remove('hidden'); control.setAttribute('aria-expanded','true'); searchInput?.focus(); }
+    function togglePanel(){ if(panel.classList.contains('hidden')) openPanel(); else closePanel(); }
+
+    control.addEventListener('click', togglePanel);
+    control.addEventListener('keydown', e => { if(e.key==='Enter' || e.key===' '){ e.preventDefault(); togglePanel(); } });
+
+    document.addEventListener('click', e => { if(!control.contains(e.target) && !panel.contains(e.target)) closePanel(); });
+    document.addEventListener('keydown', e => { if(e.key==='Escape') closePanel(); });
+
+    function readSaved(){ const raw = readCookie('initiatives_status_multi'); if(!raw) return []; try { const arr = JSON.parse(raw); return Array.isArray(arr)?arr:[];} catch { return []; } }
+    let saved = readSaved();
+
+    function renderOptions(filterText=''){
+        optionsHost.innerHTML='';
+        const statuses = Array.from(hiddenSelect.options).map(o=>o.value).filter(v=>v!=='');
+        const filtered = filterText?statuses.filter(s=>s.toLowerCase().includes(filterText.toLowerCase())):statuses;
+        if(!filtered.length){ optionsHost.innerHTML = '<div class="status-filter-empty">No matches</div>'; return; }
+        filtered.forEach(status => {
+            const id = 'status-opt-' + status.replace(/[^a-z0-9]/gi,'_');
+            const wrap = document.createElement('label');
+            wrap.className='status-option';
+            const cb = document.createElement('input');
+            cb.type='checkbox';
+            cb.value=status;
+            cb.checked = saved.includes(status);
+            cb.id = id;
+            cb.addEventListener('change', () => {
+                if(cb.checked){ if(!saved.includes(status)) saved.push(status); }
+                else { saved = saved.filter(s=>s!==status); }
+                writeCookie('initiatives_status_multi', JSON.stringify(saved), 30);
+                syncHiddenSelect();
+                updateSummary();
+                window.loadInitiatives(window.currentSortColumn, window.currentSortDirection);
+            });
+            const span = document.createElement('span');
+            span.textContent = status;
+            wrap.appendChild(cb); wrap.appendChild(span);
+            optionsHost.appendChild(wrap);
+        });
+    }
+
+    function syncHiddenSelect(){
+        Array.from(hiddenSelect.options).forEach(opt=>{ if(opt.value==='') return; opt.selected = saved.includes(opt.value); });
+        if(!saved.length && hiddenSelect.options.length){ hiddenSelect.options[0].selected = true; }
+    }
+
+    function updateSummary(){
+        if(!saved.length){ summary.textContent = 'All Statuses'; control.classList.remove('has-selection'); return; }
+        control.classList.add('has-selection');
+        summary.textContent = saved.slice(0,3).join(', ') + (saved.length>3?` +${saved.length-3}`:'');
+    }
+
+    searchInput?.addEventListener('input', e=>{ renderOptions(e.target.value.trim()); });
+    btnAll?.addEventListener('click', ()=>{
+        saved = Array.from(hiddenSelect.options).map(o=>o.value).filter(v=>v!=='');
+        writeCookie('initiatives_status_multi', JSON.stringify(saved), 30);
+        renderOptions(searchInput?.value.trim()||'');
+        syncHiddenSelect(); updateSummary(); window.loadInitiatives(window.currentSortColumn, window.currentSortDirection);
+    });
+    btnClear?.addEventListener('click', ()=>{
+        saved = [];
+        writeCookie('initiatives_status_multi', JSON.stringify(saved), 30);
+        renderOptions(searchInput?.value.trim()||'');
+        syncHiddenSelect(); updateSummary(); window.loadInitiatives(window.currentSortColumn, window.currentSortDirection);
+    });
+
+    // Initial
+    syncHiddenSelect();
+    updateSummary();
+    renderOptions();
+}

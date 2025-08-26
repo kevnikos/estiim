@@ -859,10 +859,26 @@ footer {
     <div class="flex">
         <!-- New search input for the main initiatives page -->
         <input type="text" id="init-search-input" class="main-page-search-input" placeholder="Search initiatives..." oninput="window.loadInitiatives(currentSortColumn, currentSortDirection)">
-        <!-- Multi-select status filter -->
-        <select id="init-status-filter" multiple size="1" title="Filter by one or more statuses (Ctrl/Cmd+Click)." onchange="window.loadInitiatives(currentSortColumn, currentSortDirection)" style="min-width:160px;">
-            <option value="">All Statuses</option>
-        </select>
+                <!-- Enhanced Status Filter (custom multi-select UI) -->
+                <div class="status-filter-wrapper">
+                    <select id="init-status-filter" multiple style="display:none;">
+                        <option value="">All Statuses</option>
+                    </select>
+                    <div id="status-filter-control" class="status-filter-control" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+                        <span id="status-filter-summary">All Statuses</span>
+                        <span class="status-filter-caret" aria-hidden="true">▾</span>
+                    </div>
+                                <div id="status-filter-panel" class="status-filter-panel hidden" role="listbox" aria-multiselectable="true">
+                                    <div class="status-filter-toolbar">
+                                        <input id="status-filter-search" type="text" placeholder="Search statuses..." aria-label="Search statuses" />
+                                    </div>
+                                    <div id="status-filter-options" class="status-filter-options" tabindex="-1"></div>
+                                    <div class="status-filter-footer">
+                                        <button type="button" id="status-filter-btn-all" class="mini-btn subtle" title="Select all statuses">Select All</button>
+                                        <button type="button" id="status-filter-btn-clear" class="mini-btn danger subtle" title="Clear selection">Clear</button>
+                                    </div>
+                                </div>
+                </div>
         <button onclick="window.addInitiative()">+ Add Initiative</button>
         <button class="export-button" onclick="window.exportInitiatives()">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> Export

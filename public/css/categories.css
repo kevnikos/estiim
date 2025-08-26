@@ -9,6 +9,41 @@
     color: #0066cc;
 }
 
+/* ---- Status Filter (Custom Multi-Select) ---- */
+.status-filter-wrapper { position:relative; font-size:14px; min-width:220px; margin-left:8px; display:flex; align-items:stretch; }
+.status-filter-control { display:flex; align-items:center; justify-content:space-between; gap:6px; background:#fff; border:1px solid var(--border); border-radius:6px; padding:8px 10px; cursor:pointer; min-height:38px; line-height:1.2; box-shadow:0 1px 2px rgba(0,0,0,0.04); font-size:14px; font-family:Inter,Arial,sans-serif; }
+.status-filter-control:focus { outline:2px solid var(--blue); outline-offset:2px; }
+.status-filter-caret { font-size:10px; opacity:0.7; }
+.status-filter-panel { position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid var(--border); border-radius:8px; margin-top:4px; padding:8px 8px 10px; z-index:1002; box-shadow:0 6px 16px -4px rgba(0,0,0,0.08),0 3px 6px -2px rgba(0,0,0,0.08); animation:fadeScale .12s ease; font-size:13px; }
+.status-filter-panel.hidden { display:none; }
+@keyframes fadeScale { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+.status-filter-toolbar { display:flex; align-items:center; gap:6px; margin-bottom:6px; padding:0 2px; }
+.status-filter-toolbar input { flex:1; padding:8px 10px; font-size:14px; border:1px solid var(--border); border-radius:6px; background:#f9fafb; font-family:Inter,Arial,sans-serif; }
+.status-filter-toolbar input:focus { outline:2px solid var(--blue); outline-offset:0; background:#fff; }
+.status-filter-footer { display:flex; justify-content:space-between; gap:6px; margin-top:8px; padding:4px 2px 0; border-top:1px solid var(--border); }
+.mini-btn { background:var(--blue); color:#fff; border:none; padding:5px 10px; font-size:11px; line-height:1; border-radius:16px; cursor:pointer; font-weight:500; letter-spacing:.3px; }
+.mini-btn.subtle { background:#eef2ff; color:#1e3a8a; }
+.mini-btn.subtle:hover { background:#e0e7ff; }
+.mini-btn.danger { background:var(--red); color:#fff; }
+.mini-btn.danger.subtle { background:#fef2f2; color:#b91c1c; }
+.mini-btn.danger.subtle:hover { background:#fee2e2; }
+.mini-btn:hover:not(.subtle) { background:var(--blue-dark); }
+.mini-btn.danger:hover:not(.subtle) { background:#b91c1c; }
+.status-filter-options { max-height:240px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; padding:4px; background:#fff; display:grid; grid-template-columns:1fr; gap:2px; }
+.status-option { position:relative; display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px; cursor:pointer; font-size:13px; line-height:1.25; transition:background .12s, box-shadow .12s; border:1px solid transparent; font-family:Inter,Arial,sans-serif; }
+.status-option:hover { background:#f1f5f9; }
+.status-option input { appearance:none; -webkit-appearance:none; width:16px; height:16px; border:2px solid var(--blue); border-radius:4px; display:inline-flex; align-items:center; justify-content:center; position:relative; cursor:pointer; background:#fff; transition:background .12s, border-color .12s; }
+.status-option input:focus { outline:2px solid var(--blue); outline-offset:2px; }
+.status-option input:checked { background:var(--blue); border-color:var(--blue); }
+.status-option input:checked::after { content:""; width:6px; height:10px; border:2px solid #fff; border-top:none; border-left:none; transform:rotate(45deg); position:absolute; top:1px; left:4px; }
+.status-option.active { background:#fff; border:1px solid var(--green); box-shadow:0 0 0 2px rgba(34,197,94,0.18); }
+.status-filter-pill-list { display:flex; flex-wrap:wrap; gap:4px; }
+.status-pill { background:#eef2ff; color:#374151; padding:2px 6px; border-radius:12px; font-size:11px; display:inline-flex; align-items:center; gap:4px; }
+.status-pill button { background:transparent; border:none; cursor:pointer; font-size:12px; line-height:1; padding:0 2px; }
+.status-pill button:hover { color:#dc2626; }
+.status-filter-control.has-selection { border-color:var(--green); background:#fff; box-shadow:0 0 0 2px rgba(34,197,94,0.18); }
+.status-filter-empty { font-size:11px; padding:6px 4px; color:#555; }
+
 .category-suggestions {
     position: absolute;
     background: white;

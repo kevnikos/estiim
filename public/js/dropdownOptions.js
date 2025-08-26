@@ -14,6 +14,10 @@ let dropdownOptionsCache = {
 export async function initDropdownOptions() {
     await loadAllDropdownOptions();
     setupDropdownOptionsListeners();
+    // Build enhanced status filter UI after options
+    if (window.initEnhancedStatusFilterUI) {
+        window.initEnhancedStatusFilterUI();
+    }
 }
 
 // Load all dropdown options from the server
