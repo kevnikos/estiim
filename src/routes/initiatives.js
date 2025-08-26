@@ -43,13 +43,20 @@ export default function createInitiativesRouter(db) {
 
   // GET /api/initiatives
   router.get('/', async (req, res) => {
-    const { status } = req.query; // Get status from query parameters
+    const { status } = req.query; // can be single or comma-separated
     let query = 'SELECT * FROM initiatives';
     let params = [];
 
     if (status) {
-      query += ' WHERE status = ?';
-      params.push(status);
+      const parts = status.split(',').map(s => s.trim()).filter(s => s.length);
+      if (parts.length === 1) {
+        query += ' WHERE status = ?';
+        params.push(parts[0]);
+      } else if (parts.length > 1) {
+        const placeholders = parts.map(() => '?').join(',');
+        query += ` WHERE status IN (${placeholders})`;
+        params.push(...parts);
+      }
     }
 
     const rows = await db.all(query, params);

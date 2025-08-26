@@ -90,22 +90,47 @@ function updateFormDropdown(selectElement, options) {
 export function populateStatusFilter() {
     const filterSelect = document.getElementById('init-status-filter');
     if (!filterSelect) return;
-    
+
+    const previousSelections = Array.from(filterSelect.selectedOptions).map(o => o.value);
+    const savedMulti = getCookieValue('initiatives_status_multi');
+    let savedSelections = [];
+    if (savedMulti) {
+        try { savedSelections = JSON.parse(savedMulti); } catch { savedSelections = []; }
+    }
+
     filterSelect.innerHTML = '';
-    
-    // Add the "All Statuses" option
+
+    // Always keep an explicit All option (acts as reset when chosen alone)
     const allOption = document.createElement('option');
     allOption.value = '';
     allOption.textContent = 'All Statuses';
     filterSelect.appendChild(allOption);
-    
-    // Add the status options
+
     dropdownOptionsCache.status.forEach(status => {
         const optEl = document.createElement('option');
         optEl.value = status;
         optEl.textContent = status;
         filterSelect.appendChild(optEl);
     });
+
+    const toSelect = savedSelections.length ? savedSelections : previousSelections;
+    if (toSelect.length) {
+        Array.from(filterSelect.options).forEach(opt => {
+            if (toSelect.includes(opt.value) && opt.value !== '') opt.selected = true;
+        });
+        // If we have any concrete statuses selected, ensure All isn't selected simultaneously
+        if (Array.from(filterSelect.selectedOptions).some(o => o.value !== '')) {
+            allOption.selected = false;
+        }
+    } else {
+        // Default to All
+        allOption.selected = true;
+    }
+}
+
+function getCookieValue(name) {
+    const nameEQ = name + '=';
+    return document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith(nameEQ))?.substring(nameEQ.length) || null;
 }
 
 // Set up event listeners for dropdown option management

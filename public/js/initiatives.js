@@ -87,53 +87,49 @@ function calculateInitiativeTotalCost(initiative) {
 }
 
 // Cookie utility functions
-function setCookie(name, value, days) {
-    let expires = "";
-    if (days) {
-        const date = new Date();
-        date.setTime(date.getTime() + (days*24*60*60*1000));
-        expires = "; expires=" + date.toUTCString();
-    }
-    document.cookie = name + "=" + (value || "") + expires + "; path=/";
-    if (days) {
-        const date = new Date();
-        date.setTime(date.getTime() + (days*24*60*60*1000));
-        expires = "; expires=" + date.toUTCString();
-    }
-    document.cookie = name + "=" + (value || "")  + expires + "; path=/";
-}
-
-function getCookie(name) {
-    const nameEQ = name + "=";
-    const ca = document.cookie.split(';');
-    for(let i=0;i < ca.length;i++) {
-        let c = ca[i];
-        while (c.charAt(0)==' ') c = c.substring(1,c.length);
-        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
-    }
-    return null;
-}
+// (Legacy single-status cookie helpers removed in favor of writeCookie/readCookie below)
 
 // Handle status filter persistence and setup
 export function initStatusFilter() {
     const statusFilter = document.getElementById('init-status-filter');
     if (!statusFilter) return;
 
-    // Set up the change handler (only once)
-    if (!statusFilter.hasChangeListener) {
-        statusFilter.hasChangeListener = true;
-        statusFilter.addEventListener('change', (e) => {
-            setCookie('initiatives_status', e.target.value, 30);
+    if (!statusFilter.hasMultiHandler) {
+        statusFilter.hasMultiHandler = true;
+        statusFilter.addEventListener('change', () => {
+            const selected = Array.from(statusFilter.selectedOptions).map(o => o.value).filter(v => v !== '');
+            if (selected.length === 0) {
+                // If nothing or All selected -> treat as All
+                writeCookie('initiatives_status_multi', JSON.stringify([]), 30);
+            } else {
+                writeCookie('initiatives_status_multi', JSON.stringify(selected), 30);
+            }
             window.loadInitiatives(window.currentSortColumn, window.currentSortDirection);
         });
     }
 
-    // Restore saved value
-    const savedStatus = getCookie('initiatives_status');
-    if (savedStatus !== null) {
-        statusFilter.value = savedStatus;
+    const saved = readCookie('initiatives_status_multi');
+    if (saved) {
+        try {
+            const arr = JSON.parse(saved);
+            if (Array.isArray(arr) && arr.length) {
+                Array.from(statusFilter.options).forEach(opt => {
+                    if (arr.includes(opt.value)) opt.selected = true;
+                });
+            }
+        } catch {}
+    } else {
+        // Default All selected
+        if (statusFilter.options.length) statusFilter.options[0].selected = true;
     }
 }
+
+function writeCookie(name, value, days){
+    let expires = '';
+    if(days){const d=new Date();d.setTime(d.getTime()+days*24*60*60*1000);expires='; expires='+d.toUTCString();}
+    document.cookie = name + '=' + (value||'') + expires + '; path=/';
+}
+function readCookie(name){const nameEQ=name+'=';for(const cRaw of document.cookie.split(';')){let c=cRaw.trim();if(c.indexOf(nameEQ)===0)return c.substring(nameEQ.length);}return null;}
 
 /**
  * Loads and displays the list of initiatives, with filtering and sorting.
@@ -143,22 +139,25 @@ export function initStatusFilter() {
 export async function loadInitiatives(sortBy = 'created_at', sortDirection = 'desc') {
     const statusFilterElem = document.getElementById('init-status-filter');
     const searchInput = document.getElementById('init-search-input');
-    let statusFilter = '';
+    let selectedStatuses = [];
     let searchText = '';
-    
+
     if (statusFilterElem) {
-        statusFilter = statusFilterElem.value || '';
+        selectedStatuses = Array.from(statusFilterElem.selectedOptions).map(o => o.value).filter(v => v !== '');
     }
     if (searchInput) {
         searchText = searchInput.value.toLowerCase().trim();
     }
 
-  let url = window.API + '/api/initiatives';
-  if (statusFilter) {
-    url += `?status=${encodeURIComponent(statusFilter)}`;
-  }
-  const res = await fetch(url);
-  let allInitiatives = await res.json();
+    let url = window.API + '/api/initiatives';
+    if (selectedStatuses.length === 1) {
+        url += `?status=${encodeURIComponent(selectedStatuses[0])}`;
+    } else if (selectedStatuses.length > 1) {
+        // Pass comma separated list for backend multi support
+        url += `?status=${encodeURIComponent(selectedStatuses.join(','))}`;
+    }
+    const res = await fetch(url);
+    let allInitiatives = await res.json();
   window.initList = allInitiatives; // Still store all initiatives for other uses like edit
   console.log('Loaded initiatives:', allInitiatives);
 

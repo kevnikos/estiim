@@ -859,7 +859,8 @@ footer {
     <div class="flex">
         <!-- New search input for the main initiatives page -->
         <input type="text" id="init-search-input" class="main-page-search-input" placeholder="Search initiatives..." oninput="window.loadInitiatives(currentSortColumn, currentSortDirection)">
-        <select id="init-status-filter" onchange="window.loadInitiatives(currentSortColumn, currentSortDirection)">
+        <!-- Multi-select status filter -->
+        <select id="init-status-filter" multiple size="1" title="Filter by one or more statuses (Ctrl/Cmd+Click)." onchange="window.loadInitiatives(currentSortColumn, currentSortDirection)" style="min-width:160px;">
             <option value="">All Statuses</option>
         </select>
         <button onclick="window.addInitiative()">+ Add Initiative</button>

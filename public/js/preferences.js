@@ -12,7 +12,7 @@ export function loadPreferences() {
         try {
             const parsedPrefs = JSON.parse(prefsCookie);
             window.userPreferences = {
-                initiativeStatusFilter: parsedPrefs.initiativeStatusFilter || '', // New: default to all
+                initiativeStatusFilter: parsedPrefs.initiativeStatusFilter || '',
                 enableBranding: parsedPrefs.enableBranding !== false, // default true
                 backupFrequency: parsedPrefs.backupFrequency || 30 // default 30 minutes
             };
@@ -32,7 +32,12 @@ export function loadPreferences() {
  * Saves the current preferences from the form to a cookie.
  */
 export async function savePreferences() {
-    window.userPreferences.initiativeStatusFilter = document.getElementById('init-status-filter').value; // Save the status filter
+    // Save current multi-select status filter as array for legacy compatibility
+    const statusFilterEl = document.getElementById('init-status-filter');
+    if (statusFilterEl) {
+        const selected = Array.from(statusFilterEl.selectedOptions).map(o => o.value).filter(v => v !== '');
+        window.userPreferences.initiativeStatusFilter = selected.join(',');
+    }
     window.userPreferences.enableBranding = document.getElementById('branding-checkbox').checked;
     const newFrequency = parseInt(document.getElementById('backupFrequency').value, 10) || 30;
     window.userPreferences.backupFrequency = newFrequency;
@@ -72,7 +77,14 @@ export function populatePrefsPage() {
     // Set the status filter dropdown value
     const statusFilterDropdown = document.getElementById('init-status-filter');
     if (statusFilterDropdown) {
-        statusFilterDropdown.value = window.userPreferences.initiativeStatusFilter;
+        const saved = (window.userPreferences.initiativeStatusFilter || '').split(',').filter(v => v);
+        if (saved.length) {
+            Array.from(statusFilterDropdown.options).forEach(opt => {
+                if (saved.includes(opt.value)) opt.selected = true;
+            });
+        } else if (statusFilterDropdown.options.length) {
+            statusFilterDropdown.options[0].selected = true; // All
+        }
     }
     const brandingCheckbox = document.getElementById('branding-checkbox');
     if (brandingCheckbox) {
