@@ -12,12 +12,12 @@
 /* Added scroll-padding-top to account for sticky header */
 html, body { scroll-behavior: smooth; scroll-padding-top: 60px; /* Adjust this value if header height changes */ }
 * { box-sizing:border-box; font-family:Inter,Arial,sans-serif; }
-body { margin:0; background:var(--bg); color:var(--text); font-size:12px; }
+body { margin:0; background:var(--bg); color:var(--text); font-size:12px; height:100vh; display:flex; flex-direction:column; }
 header { background:var(--primary); color:#fff; padding:12px 24px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:1001; /* Ensure header is above flyout */ }
 header h1 { margin:0; font-size:22px; font-weight:600; cursor:pointer; }
 /* Removed nav a styles */
-section { display:none; padding:24px; }
-section.active { display:block; }
+section { display:none; padding:24px; flex:1; overflow:hidden; }
+section.active { display:flex; flex-direction:column; }
 .card { background:var(--card); padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,.05); margin-bottom:24px; }
 h2 { margin:0 0 12px; font-size:18px; font-weight:600; }
 button, input, select, textarea { font-size:14px; padding:8px 10px; border-radius:6px; border:1px solid var(--border); }
@@ -598,13 +598,28 @@ footer {
 
 /* Styles for Initiatives table container */
 #init-table-container {
-    max-height: 360px; /* 8 items * ~45px height per row */
     overflow-y: auto;
     overflow-x: auto; /* Added for horizontal scrolling */
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 10px;
     background-color: #f9fafb;
+    flex: 1; /* Take remaining space */
+    min-height: 200px; /* Minimum height to prevent collapse */
+}
+
+/* Special class for the home section to handle dynamic layout */
+section#home {
+    height: 100vh;
+    padding-top: 24px;
+    padding-bottom: 24px;
+}
+
+section#home .card:last-child {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
 }
 
 /* Styles for Resource Types table container */
